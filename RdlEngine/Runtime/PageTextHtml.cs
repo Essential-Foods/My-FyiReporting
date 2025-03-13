@@ -589,13 +589,35 @@ namespace Majorsilence.Reporting.Rdl
 					case "font-weight":
 						HandleStyleFontWeight(si, tval);
 						break;
-				}
+                    case "text-align":
+                        HandleStyleTextAlign(si, tval);
+                        break;
+                }
 			}
 			
 			return;
 		}
 
-		private void HandleStyleFontSize(StyleInfo si, string size)
+        private void HandleStyleTextAlign(StyleInfo si, string align)
+        {
+            switch (align)
+            {
+                case "right":
+                    si.TextAlign = TextAlignEnum.Right;
+                    break;
+                case "left":
+                    si.TextAlign = TextAlignEnum.Left;
+                    break;
+                case "center":
+                    si.TextAlign = TextAlignEnum.Center;
+                    break;
+                case "justify":
+                    si.TextAlign = TextAlignEnum.Justified;
+                    break;
+            }
+        }
+
+        private void HandleStyleFontSize(StyleInfo si, string size)
 		{
 			try
 			{

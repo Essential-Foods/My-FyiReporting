@@ -881,7 +881,7 @@ namespace Majorsilence.Reporting.Rdl
 				if (drawFont != null)
 					drawFont.Dispose();
 				if (drawFormat != null)
-					drawFont.Dispose();
+                    drawFormat.Dispose();
 			}
 		}
 		

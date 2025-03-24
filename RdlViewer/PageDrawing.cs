@@ -721,8 +721,8 @@ namespace Majorsilence.Reporting.RdlViewer
                 if ((pi is PagePolygon) || (pi is PageCurve))
                 { // intentionally empty; polygon's rectangles aren't calculated
                 }
-                else if (!rect.IntersectsWith(clipRect))
-                    continue;
+                //else if (!rect.IntersectsWith(clipRect))
+                //    continue;
 
                 if (pi.SI.BackgroundImage != null)
                 {	// put out any background image

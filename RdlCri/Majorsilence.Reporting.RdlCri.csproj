@@ -16,6 +16,7 @@
 		<PackageId>Majorsilence.Reporting.RdlCri.SkiaSharp</PackageId>
 	</PropertyGroup>
     <ItemGroup>
+        <ProjectReference Include="..\DataProviders\Majorsilence.Reporting.DataProviders.csproj" />
         <ProjectReference Include="..\RdlEngine\Majorsilence.Reporting.RdlEngine.csproj" />
     </ItemGroup>
     <ItemGroup>

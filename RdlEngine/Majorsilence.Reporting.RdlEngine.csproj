@@ -14,6 +14,7 @@
 		<TargetFrameworks>net8.0</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<Platforms>AnyCPU;x86</Platforms>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug-DrawingCompat' Or '$(Configuration)' == 'Release-DrawingCompat'">
 		<PackageId>Majorsilence.Reporting.RdlEngine.SkiaSharp</PackageId>
@@ -46,7 +47,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="RdlEngineConfig.xml">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 	<ItemGroup>
@@ -62,7 +63,9 @@
 			<LastGenOutput>Strings.ru-RU.Designer.cs</LastGenOutput>
 		</EmbeddedResource>
 	</ItemGroup>
-	<PropertyGroup />
+	<PropertyGroup>
+	  <BaseOutputPath>E:\Repositories\My-FyiReporting\RdlEngine\bin</BaseOutputPath>
+	</PropertyGroup>
 	<ItemGroup>
 		<Compile Update="Resources\Strings.Designer.cs">
 			<DesignTime>True</DesignTime>

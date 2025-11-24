@@ -17,6 +17,7 @@
 		<Configurations>Debug;Release;Debug-DrawingCompat</Configurations>
 		<TargetFrameworks>net8.0-windows</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
+		<Platforms>AnyCPU;x86</Platforms>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Remove="RdlReader\bin\**" />
@@ -87,5 +88,7 @@
 		<EmbeddedResource Remove="RdlReader\ZoomTo.resx" />
 		<EmbeddedResource Remove="RdlReader\ZoomTo.ru-RU.resx" />
 	</ItemGroup>
-	<PropertyGroup />
+	<PropertyGroup>
+	  <BaseOutputPath>E:\Repositories\My-FyiReporting\RdlViewer\bin</BaseOutputPath>
+	</PropertyGroup>
 </Project>

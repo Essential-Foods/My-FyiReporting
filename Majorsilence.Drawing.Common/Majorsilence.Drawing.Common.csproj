@@ -7,6 +7,8 @@
 		<Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<BaseOutputPath>E:\Repositories\My-FyiReporting\Majorsilence.Drawing.Common\bin</BaseOutputPath>
+		<Platforms>AnyCPU;x86</Platforms>
 	</PropertyGroup>
 
 	<ItemGroup>

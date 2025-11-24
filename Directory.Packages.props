@@ -4,10 +4,10 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="BarcodeLib" Version="3.0.3" />
+    <PackageVersion Include="BarcodeLib" Version="3.1.5" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.2.0" />
     <PackageVersion Include="dotConnect.Express.for.PostgreSQL" Version="8.3.10" />
-    <PackageVersion Include="iTextSharp.LGPLv2.Core" Version="3.7.1" />
+    <PackageVersion Include="iTextSharp.LGPLv2.Core" Version="3.7.2" />
     <PackageVersion Include="Majorsilence.Reporting.RdlViewer" Version="5.0.7-alpha" />
     <PackageVersion Include="Majorsilence.Reporting.RdlEngine" Version="5.0.7-alpha" />
     <PackageVersion Include="Majorsilence.Reporting.RdlCri" Version="5.0.7-alpha" />
@@ -19,13 +19,13 @@
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageVersion Include="Microsoft.WindowsAzure.ConfigurationManager" Version="1.8.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageVersion Include="NPOI" Version="2.7.2" />
+    <PackageVersion Include="NPOI" Version="2.7.3" />
     <PackageVersion Include="NUnit" Version="4.3.2" />
     <PackageVersion Include="NUnit3TestAdapter" Version="5.0.0" />
     <PackageVersion Include="PdfPig" Version="0.1.9" />
     <PackageVersion Include="SharpZipLib" Version="1.4.2" />
-    <PackageVersion Include="SkiaSharp" Version="3.116.1" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
+    <PackageVersion Include="SkiaSharp" Version="3.119.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
     <PackageVersion Include="System.Data.DataSetExtensions" Version="4.5.0" />
     <PackageVersion Include="System.Spatial" Version="5.8.5" />
     <PackageVersion Include="WindowsAzure.Storage" Version="4.3.0" />
@@ -41,12 +41,12 @@
     <PackageVersion Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.13" />
     <PackageVersion Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.21" />
     <PackageVersion Include="ZKWeb.System.Drawing" Version="4.0.1" />
-    <PackageVersion Include="System.Drawing.Common" Version="8.0.4" />
+    <PackageVersion Include="System.Drawing.Common" Version="9.0.4" />
     <PackageVersion Include="jacobslusser.ScintillaNET" Version="3.6.3" />
     <PackageVersion Include="fernandreu.ScintillaNET" Version="4.2.0" />
-    <PackageVersion Include="System.CodeDom" Version="8.0.0" />
-    <PackageVersion Include="System.Data.Odbc" Version="8.0.0" />
-    <PackageVersion Include="System.Data.OleDb" Version="8.0.0" />
-    <PackageVersion Include="System.Data.SqlClient" Version="4.8.6" />
+    <PackageVersion Include="System.CodeDom" Version="9.0.4" />
+    <PackageVersion Include="System.Data.Odbc" Version="9.0.4" />
+    <PackageVersion Include="System.Data.OleDb" Version="9.0.4" />
+    <PackageVersion Include="System.Data.SqlClient" Version="4.9.0" />
   </ItemGroup>
 </Project>

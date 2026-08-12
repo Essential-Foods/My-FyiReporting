@@ -87,6 +87,7 @@
 		<PackageReference Include="NPOI" />
 		<PackageReference Include="SharpZipLib" />
 		<PackageReference Include="SkiaSharp" />
+		<PackageReference Include="System.Security.Cryptography.Xml" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' != 'net48' ">
 		<!-- Add your item references here -->

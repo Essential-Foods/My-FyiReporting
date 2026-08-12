@@ -23,6 +23,7 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="BarcodeLib" />
+        <PackageReference Include="System.Security.Cryptography.Xml" />
         <PackageReference Include="ZXing.Net" />
     </ItemGroup>
 	<ItemGroup>

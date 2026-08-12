@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Xml;
@@ -69,21 +48,21 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "Grouping":
+					case "grouping":
 						_Grouping = new Grouping(r, this, xNodeLoop);
 						break;
-					case "Sorting":
+					case "sorting":
 						_Sorting = new Sorting(r, this, xNodeLoop);
 						break;
-					case "ReportItems":
+					case "reportitems":
 						_ReportItems = new ReportItems(r, this, xNodeLoop);
 						break;
-					case "DataInstanceName":
+					case "datainstancename":
 						_DataInstanceName = xNodeLoop.InnerText;
 						break;
-					case "DataInstanceElementOutput":
+					case "datainstanceelementoutput":
 						_DataInstanceElementOutput = Majorsilence.Reporting.Rdl.DataInstanceElementOutput.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
 					default:	
@@ -115,9 +94,8 @@ namespace Majorsilence.Reporting.Rdl
 
 			foreach (ReportItem ri in this.ReportItems.Items)
 			{
-				if (!(ri is Textbox))
+				if (!(ri is Textbox tb))
 					continue;
-				Textbox tb = ri as Textbox;
 				if (tb.CanGrow)
 				{
 					if (this._GrowList == null)
@@ -384,8 +362,9 @@ namespace Majorsilence.Reporting.Rdl
                             p = RunPageNew(pgs, p);					// yes; if at end this page is empty
 
                         float saveYoffset = p.YOffset;              // this can be affected by other page items
+                        PageRectangle border = null;
                         if (Style != null) {
-	                        var border = new PageRectangle();
+	                        border = new PageRectangle();
                             await SetPagePositionAndStyle(rpt, border, row);
 	                        p.AddObject(border);
                         }
@@ -405,6 +384,9 @@ namespace Majorsilence.Reporting.Rdl
                                 p.YOffset += await this.Style.EvalPaddingBottom(rpt, row);
                             }
                         }
+                        
+                        if(border != null) // fix up the border height
+	                        border.H = p.YOffset - border.Y;
 					}
 				}
 				else

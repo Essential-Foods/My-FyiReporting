@@ -1,29 +1,10 @@
 //This file has been modified based on forum user suggestions.
 
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Reflection;
 using System.CodeDom;
@@ -47,11 +28,19 @@ namespace Majorsilence.Reporting.Rdl
 		string _Source;			// The source code
 		string _Classname;		// Class name of generated class
 		Assembly _Assembly;		// the compiled assembly
-	
+		bool _HasRegisteredProvider;	// true when an RdlCodeFunctions factory is registered (AOT path)
+
 		internal Code(ReportDefn r, ReportLink p, XmlNode xNode) : base(r, p)
 		{
-			_Source=xNode.InnerText;
-			_Assembly = GetAssembly();
+			_Source = xNode.InnerText;
+			if (RdlEngineConfig.CodeProviderFactory != null)
+			{
+				_HasRegisteredProvider = true;
+			}
+			else
+			{
+				_Assembly = GetAssembly();
+			}
 		}
 		
 		override internal Task FinalPass()
@@ -59,8 +48,18 @@ namespace Majorsilence.Reporting.Rdl
 			return Task.CompletedTask;
 		}
 
+		[RequiresDynamicCode("Compiles and loads VB source at runtime via VBCodeProvider; not AOT-compatible")]
 		private Assembly GetAssembly()
 		{
+#if !NETFRAMEWORK
+			// .NET Framework always supports dynamic code (JIT); the property only
+			// exists on net6.0+, where Native AOT can report it as false.
+			if (!RuntimeFeature.IsDynamicCodeSupported)
+				throw new PlatformNotSupportedException(
+					"The <Code> element in RDL reports requires dynamic code compilation (VBCodeProvider) " +
+					"which is not supported under Native AOT. Remove the <Code> element or use a pre-compiled CodeModule instead.");
+#endif
+
 			// Generate the proxy source code
             List<string> lines = new List<string>();		// hold lines in array in case of error
 
@@ -72,7 +71,7 @@ namespace Majorsilence.Reporting.Rdl
             //Imports Microsoft.VisualBasic
             //Imports System.Convert
             //Imports System.Math 
-            //Namespace fyiReporting.vbgen
+            //Namespace Majorsilence.Reporting.vbgen
 			//Public Class MyClassn	   // where n is a uniquely generated integer
 			//Sub New()
 			//End Sub
@@ -85,7 +84,7 @@ namespace Majorsilence.Reporting.Rdl
             lines.Add("Imports System.Convert");
             lines.Add("Imports System.Math");
             lines.Add("Imports Majorsilence.Reporting.Rdl");
-            lines.Add("Namespace fyiReporting.vbgen");
+            lines.Add("Namespace Majorsilence.Reporting.vbgen");
 			_Classname = "MyClass" + unique;
 			lines.Add("Public Class " + _Classname);
             lines.Add("Private Shared _report As CodeReport");
@@ -129,17 +128,17 @@ namespace Majorsilence.Reporting.Rdl
             string re;
             //AJM GJL 250608 - Try the Bin Directory too, for websites
             if (RdlEngineConfig.DirectoryLoadedFrom == null) {
-                if (System.IO.File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RdlEngine.dll"))) {
-                    re = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RdlEngine.dll");   // this can fail especially in web scenarios
+                if (System.IO.File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Majorsilence.Reporting.RdlEngine.dll"))) {
+                    re = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Majorsilence.Reporting.RdlEngine.dll");   // this can fail especially in web scenarios
                 }
                 else
                 {
                     re = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Bin");   // this can work especially in web scenarios
-                    re = Path.Combine(re, "RdlEngine.dll");  
+                    re = Path.Combine(re, "Majorsilence.Reporting.RdlEngine.dll");  
                 }
             }
             else
-                re = Path.Combine(RdlEngineConfig.DirectoryLoadedFrom, "RdlEngine.dll");     // use RdlEngineConfig.xml directory when available
+                re = Path.Combine(RdlEngineConfig.DirectoryLoadedFrom, "Majorsilence.Reporting.RdlEngine.dll");     // use RdlEngineConfig.xml directory when available
 
 			cp.ReferencedAssemblies.Add(re);
             // also allow access to classes that have been added to report
@@ -147,7 +146,6 @@ namespace Majorsilence.Reporting.Rdl
             {
                 foreach(CodeModule cm in this.OwnerReport.CodeModules.Items)
                 {
-                    //Changed from Forum, User: solidstate http://www.fyireporting.com/forum/viewtopic.php?t=905
                     string modulePath = Path.Combine(Path.GetDirectoryName(re), cm.CdModule); 
                     cp.ReferencedAssemblies.Add(modulePath); 
                 }
@@ -178,18 +176,22 @@ namespace Majorsilence.Reporting.Rdl
 
 		internal Type CodeType()
 		{
+			// The RdlCodeFunctions path doesn't need a Type — FunctionCode dispatches by name
+			if (_HasRegisteredProvider)
+				return null;
+
 			if (_Assembly == null)
 				return null;
 
 			Type t=null;
 			try
 			{
-				object instance = _Assembly.CreateInstance("fyiReporting.vbgen." + this._Classname, false); 
+				object instance = _Assembly.CreateInstance("Majorsilence.Reporting.vbgen." + this._Classname, false);
 				t = instance.GetType();
 			}
 			catch (Exception e)
 			{
-				OwnerReport.rl.LogError(4, 
+				OwnerReport.rl.LogError(4,
 					string.Format("Unable to load instance of Code\r\n{0}", e.Message));
 			}
 			return t;
@@ -204,6 +206,15 @@ namespace Majorsilence.Reporting.Rdl
 			if (wc.Instance != null)	// Already loaded
 				return wc.Instance;
 
+			// AOT path: use the registered RdlCodeFunctions factory instead of VBCodeProvider
+			if (_HasRegisteredProvider)
+			{
+				var rcf = RdlEngineConfig.CodeProviderFactory!(rpt);
+				rcf.Report = new CodeReport(rpt);
+				wc.Instance = rcf;
+				return rcf;
+			}
+
 			if (_Assembly == null)
 			{
 				wc.bCreateFailed = true;	// we don't have an assembly
@@ -216,7 +227,7 @@ namespace Majorsilence.Reporting.Rdl
 			{
                 object[] args = new object[1];
                 args[0] = rpt;
-				wc.Instance = _Assembly.CreateInstance("fyiReporting.vbgen." + this._Classname, false, BindingFlags.CreateInstance, null, args, null, null); 
+				wc.Instance = _Assembly.CreateInstance("Majorsilence.Reporting.vbgen." + this._Classname, false, BindingFlags.CreateInstance, null, args, null, null); 
 			}
 			catch (Exception e)
 			{

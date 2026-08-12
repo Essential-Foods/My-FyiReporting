@@ -6,12 +6,12 @@
 		<ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<AssemblyTitle>RDL Data WPF Library</AssemblyTitle>
-		<Description></Description>
 		<DelaySign>false</DelaySign>
 		<PackageId>Majorsilence.Reporting.LibRdlWpfViewer</PackageId>
 		<Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
+        <IsPackable>true</IsPackable>
 	</PropertyGroup>
 	<ItemGroup>
 		<Reference Update="System.Core">

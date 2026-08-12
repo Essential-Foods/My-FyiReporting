@@ -1,25 +1,3 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Xml;
 using System.Collections;
@@ -29,6 +7,7 @@ using System.IO;
 using System.Globalization;
 using System.Data;
 using System.Data.SqlClient;
+using Majorsilence.Pdf.Security;
 using Majorsilence.Reporting.Rdl;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
@@ -65,9 +44,7 @@ namespace Majorsilence.Reporting.Rdl
 		internal int PageNumber=1;			// current page number
 		internal int TotalPages=1;			// total number of pages in report
 		internal DateTime ExecutionTime;	// start time of report execution
-
-
-        // - Added due to Embedded font bug. Solution posted by sinnovasoft. http://www.fyireporting.com/forum/viewtopic.php?t=1049
+        
         private bool _itextpdf = true;
         /// <summary> 
         ///  True: Renderpdf will use Add elements by itextsharp code; 
@@ -136,6 +113,11 @@ namespace Majorsilence.Reporting.Rdl
 			return _CurrentPage.GetPageExpressionRows(exprname);
 		}
 
+        public async Task<bool> RunGetData()
+        {
+            return await RunGetData(null);
+        }
+        
 		/// <summary>
 		/// Read all the DataSets in the report
 		/// </summary>
@@ -156,6 +138,39 @@ namespace Majorsilence.Reporting.Rdl
 		{
             await RunRender(sg, type, "");
 		}
+
+        /// <summary>
+        /// Renders the report to a stream. For PDF output the optional
+        /// <paramref name="security"/> and <paramref name="signature"/> settings
+        /// are applied; they are ignored for all other output types.
+        /// </summary>
+        public async Task RunRender(IStreamGen sg, OutputPresentationType type,
+            PdfSecurity? security, PdfSignatureOptions? signature = null)
+        {
+            if (security == null && signature == null)
+            {
+                await RunRender(sg, type);
+                return;
+            }
+
+            switch (type)
+            {
+                case OutputPresentationType.PDF:
+                case OutputPresentationType.RenderPdf_iTextSharp:
+                case OutputPresentationType.PDFOldStyle:
+                case OutputPresentationType.RenderPdf_Majorsilence:
+                    if (sg == null)
+                        throw new ArgumentException("IStreamGen cannot be null.", nameof(sg));
+                    PageNumber = 1;
+                    TotalPages = 1;
+                    IPresent ip = new RenderPdf_Raw(this, sg, security, signature);
+                    await _Report.Run(ip);
+                    break;
+                default:
+                    await RunRender(sg, type);
+                    break;
+            }
+        }
 
 		/// <summary>
 		/// Renders the report using the requested presentation type.
@@ -178,10 +193,10 @@ namespace Majorsilence.Reporting.Rdl
                 case OutputPresentationType.PDF:
                 case OutputPresentationType.RenderPdf_iTextSharp:
                 case OutputPresentationType.PDFOldStyle:
-                    ip =new RenderPdf_iTextSharp(this, sg);
+                case OutputPresentationType.RenderPdf_Majorsilence:
+                    ip = new RenderPdf_Raw(this, sg);
                     await _Report.Run(ip);
-                    break;          
-#if !DRAWINGCOMPAT
+                    break;
 				case OutputPresentationType.TIF:
                     ip = new RenderTif(this, sg);
                     await _Report.Run(ip);
@@ -192,7 +207,6 @@ namespace Majorsilence.Reporting.Rdl
                     ip = rtif;
                     await _Report.Run(ip);
                     break;
-#endif
                 case OutputPresentationType.XML:
 					if (_Report.DataTransform != null && _Report.DataTransform.Length > 0)
 					{
@@ -245,7 +259,7 @@ namespace Majorsilence.Reporting.Rdl
 			}
 
 			sg.CloseMainStream();
-            _Cache = new RCache();
+            ResetRenderCache();
             return;
 		}
 
@@ -297,7 +311,7 @@ namespace Majorsilence.Reporting.Rdl
 					temp.CloseMainStream();
 				if (fs != null)
 					fs.Close();
-                _Cache = new RCache();
+                ResetRenderCache();
             }
 		}
 
@@ -306,12 +320,13 @@ namespace Majorsilence.Reporting.Rdl
 		/// </summary>
 		/// <param name="sg"></param>
 		/// <param name="pgs"></param>
-		public async Task RunRenderPdf(IStreamGen sg, Pages pgs)
+		public async Task RunRenderPdf(IStreamGen sg, Pages pgs,
+            PdfSecurity? security = null, PdfSignatureOptions? signature = null)
 		{
 			PageNumber = 1;		// reset page numbers
 			TotalPages = 1;
 
-            IPresent ip = new RenderPdf_iTextSharp(this, sg);
+            IPresent ip = new RenderPdf_Raw(this, sg, security, signature);
          
 			try
 			{
@@ -322,13 +337,12 @@ namespace Majorsilence.Reporting.Rdl
 			finally
 			{
 				pgs.CleanUp();		// always want to make sure we cleanup to reduce resource usage
-                _Cache = new RCache();
+                ResetRenderCache();
             }
 
 			return;
 		}
 
-#if !DRAWINGCOMPAT
 		/// <summary>
 		/// RunRenderTif will render a TIF given the page structure
 		/// </summary>
@@ -350,12 +364,11 @@ namespace Majorsilence.Reporting.Rdl
             finally
             {
                 pgs.CleanUp();		// always want to make sure we cleanup to reduce resource usage
-                _Cache = new RCache();
+                ResetRenderCache();
             }
 
             return;
         }
-#endif
 
 		private void RunRenderXmlTransform(IStreamGen sg, MemoryStreamGen msg)
 		{
@@ -421,7 +434,7 @@ namespace Majorsilence.Reporting.Rdl
 			finally
 			{
 				pgs.CleanUp();		// always want to make sure we clean this up since 
-                _Cache = new RCache();
+                ResetRenderCache();
 			}
 
 			return pgs;
@@ -635,7 +648,11 @@ namespace Majorsilence.Reporting.Rdl
         {
 			_UserParameters = null;
 			_DataSets = null;
-			_Report = null;
+			if (_Report != null)
+			{
+				_Report.Dispose();
+				_Report = null;
+			}
 			_Cache = null;
 			_DataSources = null;
 			_CurrentPage = null;
@@ -654,18 +671,18 @@ namespace Majorsilence.Reporting.Rdl
 		/// </summary>
 		public string ClientLanguage
 		{
-			get 
+			get
             {
+                if (_ClientLanguage != null)
+                    return _ClientLanguage;
+
 				if (_Report.Language != null)
 				{
 					// HACK: async
 					return Task.Run(async () => await _Report.Language.EvaluateString(this, null)).GetAwaiter().GetResult();
 				}
 
-                if (_ClientLanguage != null)
-                    return _ClientLanguage;
-
-                return CultureInfo.CurrentCulture.ThreeLetterISOLanguageName; 
+                return CultureInfo.CurrentCulture.ThreeLetterISOLanguageName;
             }
 			set { _ClientLanguage = value; }
 		}
@@ -679,6 +696,13 @@ namespace Majorsilence.Reporting.Rdl
 		internal RCache Cache
 		{
 			get {return _Cache;}
+		}
+
+		private void ResetRenderCache()
+		{
+			var old = _Cache;
+			_Cache = new RCache();
+			old.TransferRowsTo(_Cache);
 		}
 	}
 
@@ -787,6 +811,15 @@ namespace Majorsilence.Reporting.Rdl
         string GetKey(int onum, string name)
         {
             return name + onum.ToString();
+        }
+
+        internal void TransferRowsTo(RCache target)
+        {
+            foreach (var kvp in _RunCache)
+            {
+                if (kvp.Value is Rows)
+                    target._RunCache.TryAdd(kvp.Key, kvp.Value);
+            }
         }
     }
 

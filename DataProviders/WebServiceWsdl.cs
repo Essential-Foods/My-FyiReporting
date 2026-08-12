@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Xml;
 using System.Data;
@@ -134,7 +113,10 @@ namespace Majorsilence.Reporting.Data
 		private Assembly GetAssembly()
 		{
 #if !NETSTANDARD2_0 && !NET6_0_OR_GREATER
-            ServiceDescription sd = GetServiceDescription();
+            ServiceDescription sd=null;
+                
+            // HACK: We need to run the async method synchronously here, but we can't use .Result or .Wait() because it can cause deadlocks. So we use Task.Run to run it on a separate thread and then wait for the result.
+            Task.Run(async()=> sd = await GetServiceDescription()).GetAwaiter().GetResult();
 
 			// ServiceDescriptionImporter provide means for generating client proxy classes for XML Web services 
 			CodeNamespace cns = new CodeNamespace(_Namespace);
@@ -183,6 +165,26 @@ namespace Majorsilence.Reporting.Data
 #endif
 		}
 
+#if !NETSTANDARD2_0 && !NET6_0_OR_GREATER
+        public async Task<ServiceDescription> GetServiceDescription()
+        {
+            ServiceDescription sd = new ServiceDescription();
+            Stream sr=null;
+            try
+            {
+                sr = await GetStream();
+                sd = ServiceDescription.Read(sr);
+            }
+            finally
+            {
+                if (sr != null)
+                    sr.Close();
+            }
+
+            return sd;
+        }
+#endif
+        
         async Task<Stream> GetStream()
         {
             string fname = _url;

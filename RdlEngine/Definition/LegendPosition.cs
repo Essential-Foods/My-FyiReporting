@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 
 namespace Majorsilence.Reporting.Rdl
@@ -52,42 +31,42 @@ namespace Majorsilence.Reporting.Rdl
 		{
 			LegendPositionEnum rs;
 
-			switch (s)
+			switch (s.ToLowerInvariant())
 			{		
-				case "TopLeft":
+				case "topleft":
 					rs = LegendPositionEnum.TopLeft;
 					break;
-				case "TopCenter":
+				case "topcenter":
 					rs = LegendPositionEnum.TopCenter;
 					break;
-				case "TopRight":
+				case "topright":
 					rs = LegendPositionEnum.TopRight;
 					break;
-				case "LeftTop":
+				case "lefttop":
 					rs = LegendPositionEnum.LeftTop;
 					break;
-				case "LeftCenter":
+				case "leftcenter":
 					rs = LegendPositionEnum.LeftCenter;
 					break;
-				case "LeftBottom":
+				case "leftbottom":
 					rs = LegendPositionEnum.LeftBottom;
 					break;
-				case "RightTop":
+				case "righttop":
 					rs = LegendPositionEnum.RightTop;
 					break;
-				case "RightCenter":
+				case "rightcenter":
 					rs = LegendPositionEnum.RightCenter;
 					break;
-				case "RightBottom":
+				case "rightbottom":
 					rs = LegendPositionEnum.RightBottom;
 					break;
-				case "BottomRight":
+				case "bottomright":
 					rs = LegendPositionEnum.BottomRight;
 					break;
-				case "BottomCenter":
+				case "bottomcenter":
 					rs = LegendPositionEnum.BottomCenter;
 					break;
-				case "BottomLeft":
+				case "bottomleft":
 					rs = LegendPositionEnum.BottomLeft;
 					break;
 				default:		

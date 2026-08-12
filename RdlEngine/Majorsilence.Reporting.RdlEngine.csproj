@@ -1,20 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<ProjectType>Local</ProjectType>
-		<AssemblyKeyContainerName></AssemblyKeyContainerName>
 		<DelaySign>false</DelaySign>
 		<OutputType>Library</OutputType>
 		<RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<AssemblyTitle>RDL Engine</AssemblyTitle>
-		<Description></Description>
 		<DelaySign>false</DelaySign>
 		<PackageId>Majorsilence.Reporting.RdlEngine</PackageId>
 		<Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
-		<TargetFrameworks>net8.0</TargetFrameworks>
+		<TargetFrameworks>net48;net8.0;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(OS)' == 'Unix'">net8.0;net10.0</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<Platforms>AnyCPU;x86</Platforms>
+        <IsPackable>true</IsPackable>
+        <Nullable>enable</Nullable>
+	</PropertyGroup>
+	<!-- AOT/trim analysis enabled for modern TFMs. Note: VBCodeProvider (<Code> element),
+	     Assembly.Load plug-ins, and custom compression still require dynamic code at runtime;
+	     those paths are guarded with [RequiresDynamicCode] / RuntimeFeature.IsDynamicCodeSupported. -->
+	<PropertyGroup Condition="'$(TargetFramework)' != 'net48'">
+		<IsAotCompatible>true</IsAotCompatible>
+		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug-DrawingCompat' Or '$(Configuration)' == 'Release-DrawingCompat'">
 		<PackageId>Majorsilence.Reporting.RdlEngine.SkiaSharp</PackageId>
@@ -52,7 +60,11 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\DataProviders\Majorsilence.Reporting.DataProviders.csproj" />
-		<ProjectReference Condition="'$(DefineConstants.Contains(DRAWINGCOMPAT))' == True" Include="..\Majorsilence.Drawing.Common\Majorsilence.Drawing.Common.csproj" />
+		<ProjectReference Include="..\Majorsilence.Pdf\Majorsilence.Pdf.csproj" />
+		<ProjectReference Include="..\Majorsilence.Pdf.Security\Majorsilence.Pdf.Security.csproj" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(DefineConstants.Contains(DRAWINGCOMPAT))' == True">
+		<ProjectReference Include="..\Majorsilence.Drawing.Common\Majorsilence.Drawing.Common.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Update="Resources\Strings.resx">
@@ -83,8 +95,6 @@
 		</EmbeddedResource>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="iTextSharp.LGPLv2.Core" />
-		<PackageReference Include="NPOI" />
 		<PackageReference Include="SharpZipLib" />
 		<PackageReference Include="SkiaSharp" />
 		<PackageReference Include="System.Security.Cryptography.Xml" />
@@ -92,18 +102,25 @@
 	<ItemGroup Condition="'$(TargetFramework)' != 'net48' ">
 		<!-- Add your item references here -->
 		<PackageReference Include="System.Data.SqlClient" />
+
 		<PackageReference Include="System.Data.Odbc" />
+		<!-- OleDB is COM-based and not AOT-compatible; kept for compilation but throws at AOT runtime -->
 		<PackageReference Include="System.Data.OleDb" />
+		<!-- CodeDom/VBCodeProvider usage is guarded with RuntimeFeature.IsDynamicCodeSupported -->
 		<PackageReference Include="System.CodeDom" />
 		<PackageReference Condition="'$(DefineConstants.Contains(DRAWINGCOMPAT))' == False" Include="System.Drawing.Common" />
+		<PackageReference Include="System.Security.Cryptography.Xml" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="PageDrawing.cs" />
 		<Compile Remove="RdlPrint.cs" />
 		<Compile Remove="Render\CompilationExtensions.cs" />
-		<Compile Remove="Render\ExcelValet_old.cs" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(DefineConstants.Contains(DRAWINGCOMPAT))'">
 		<Compile Remove="Definition\EMFConverter\**\**\*.cs" />
 	</ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+        <Reference Include="System.Net.Http" />
+        <Reference Include="System.IO.Compression" />
+    </ItemGroup>
 </Project>

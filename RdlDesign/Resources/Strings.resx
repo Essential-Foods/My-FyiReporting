@@ -876,7 +876,7 @@ XML in error:
     <value>Export Error</value>
   </data>
   <data name="MDIChild_ShowH_fyiReportingDesigner" xml:space="preserve">
-    <value>fyiReporting Designer</value>
+    <value>Majorsilence Reporting Designer</value>
   </data>
   <data name="MDIChild_ShowH_Untitled" xml:space="preserve">
     <value>Untitled</value>
@@ -896,6 +896,7 @@ XML in error:
   <data name="DialogAbout_DialogAbout_About" xml:space="preserve">
     <value>RDL Designer creates reports defined using the Report Definition Language Specification.
 Copyright (C) 2004-2008  fyiReporting Software, LLC
+Copyright (C) 2025 Majorsilence Devs
 	
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -910,7 +911,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 For additional information, visit
-the website https://github.com/majorsilence/My-FyiReporting.</value>
+the website https://github.com/majorsilence/Reporting.</value>
   </data>
   <data name="DialogAbout_DialogAbout_Version" xml:space="preserve">
     <value>Version {0}</value>

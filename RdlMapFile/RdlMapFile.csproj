@@ -1,14 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
+		<IsPackable>false</IsPackable>
 		<ApplicationIcon>App.ico</ApplicationIcon>
 		<UseWindowsForms>true</UseWindowsForms>
 		<ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 		<Configurations>Debug;Release;Debug-DrawingCompat</Configurations>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
-	</PropertyGroup>
+        <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+    </PropertyGroup>
 	<ItemGroup>
 		<Compile Update="DesignXmlDraw.cs">
 			<SubType>UserControl</SubType>
@@ -77,9 +79,12 @@
 			<LastGenOutput>Settings.Designer.cs</LastGenOutput>
 		</None>
 	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows' Or '$(TargetFramework)' == 'netstandard2.0' ">
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows' Or '$(TargetFramework)' == 'net8.0-windows' Or '$(TargetFramework)' == 'netstandard2.0' ">
 		<!-- Add your item references here -->
 		<PackageReference Include="System.Data.Odbc" />
 		<PackageReference Include="System.Data.OleDb" />
+	</ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+	  <PackageReference Include="System.Resources.Extensions" />
 	</ItemGroup>
 </Project>

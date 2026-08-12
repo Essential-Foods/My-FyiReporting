@@ -102,7 +102,7 @@ namespace ReportTests
                     await rap.DataSets[dataset.Key].SetData(dataset.Value);
                 }
             }
-            await rap.RunGetData(null);
+            await rap.RunGetData();
 
             string fileNameOut = string.Format("{0}_{1}_{2}{3}",
                                                 file2test,

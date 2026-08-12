@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+    <!-- if not windows define DRAWINGCOMPAT to use System.Drawing.Common instead of System.Drawing -->
+    <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+        <DefineConstants>DRAWINGCOMPAT</DefineConstants>
+    </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\RdlEngine\Majorsilence.Reporting.RdlEngine.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\RdlEngine\RdlEngineConfig.xml" Link="RdlEngineConfig.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Employees.rdl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="employees.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

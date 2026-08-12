@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Collections;
 using System.IO;
@@ -117,7 +96,12 @@ namespace Majorsilence.Reporting.Rdl
 			string result=null;
 			try
 			{
-				result = String.Format("{0:" + format + "}", o);
+				// Resolve the report's language the same way Style.GetFormatedString does, so
+				// that locale-sensitive formats (C, N, P, etc.) honour the RDL <Language> element
+				// instead of falling back to the ambient/thread culture (which is the invariant
+				// culture -- generic "¤" currency symbol -- in many server/container deployments).
+				string language = rpt != null ? await rpt.ReportDefinition.EvalLanguage(rpt, row) : null;
+				result = Style.FormatValue(o, Convert.GetTypeCode(o), format, language);
 			}
 			catch (Exception ex) 		// invalid format string specified
 			{           //    treat as a weak error

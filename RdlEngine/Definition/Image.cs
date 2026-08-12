@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Xml;
@@ -63,18 +42,7 @@ namespace Majorsilence.Reporting.Rdl
 
         string _EmbeddedImageData; // only for RenderHtml and embeddedImage. we need the embedded image code for html.
 
-        private string imageUrl; //Added from forum, User: solidstate http://www.fyireporting.com/forum/viewtopic.php?t=905        
-
-        private static void CopyStream(Stream src, Stream dst)
-        {
-            byte[] buffer = new byte[16 * 1024];
-            int bytesRead;
-
-            while ((bytesRead = src.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                dst.Write(buffer, 0, bytesRead);
-            }
-        }
+        private string imageUrl;         
 
         /// <summary>
         /// Only gets set for Images which contain urls rather than coming from the database etc..
@@ -98,18 +66,18 @@ namespace Majorsilence.Reporting.Rdl
             {
                 if (xNodeLoop.NodeType != XmlNodeType.Element)
                     continue;
-                switch (xNodeLoop.Name)
+                switch (xNodeLoop.Name.ToLowerInvariant())
                 {
-                    case "Source":
+                    case "source":
                         _ImageSource = Majorsilence.Reporting.Rdl.ImageSource.GetStyle(xNodeLoop.InnerText);
                         break;
-                    case "Value":
+                    case "value":
                         _Value = new Expression(r, this, xNodeLoop, ExpressionType.Variant);
                         break;
-                    case "MIMEType":
+                    case "mimetype":
                         _MIMEType = new Expression(r, this, xNodeLoop, ExpressionType.String);
                         break;
-                    case "Sizing":
+                    case "sizing":
                         _Sizing = ImageSizing.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
                         break;
                     default:
@@ -223,17 +191,17 @@ namespace Majorsilence.Reporting.Rdl
                 int height = im.Height;
                 int width = im.Width;
                 MemoryStream ostrm = new MemoryStream();
-                strm.Position = 0;
                 ImageFormat imf;
+                
                 switch (mtype.ToLower())
                 {
                     case "image/jpeg":
                         imf = ImageFormat.Jpeg;
-                        CopyStream(strm, ostrm);
+                        im.Save(ostrm, imf);
                         break;
                     case "image/png":
                         imf = ImageFormat.Png;
-                        CopyStream(strm, ostrm);
+                        im.Save(ostrm, imf);
                         break;
                     default: // from old code where all images convert to jpeg, i don't know why. May be need delete it and add all support formats.
                         imf = ImageFormat.Jpeg;
@@ -310,7 +278,6 @@ namespace Majorsilence.Reporting.Rdl
                         strm = new MemoryStream(ba);
                         break;
                     case ImageSourceEnum.External:
-                        //Added Image URL from forum, User: solidstate http://www.fyireporting.com/forum/viewtopic.php?t=905
                         string fname = this.ImageUrl = await _Value.EvaluateString(rpt, row);
                         mtype = GetMimeType(fname);
                         if (fname.StartsWith("http:") ||

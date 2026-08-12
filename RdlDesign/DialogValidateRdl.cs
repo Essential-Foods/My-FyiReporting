@@ -1,25 +1,3 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Drawing;
 using System.Collections;
@@ -35,19 +13,18 @@ namespace Majorsilence.Reporting.RdlDesign
     /// <summary>
     /// Summary description for DialogAbout.
     /// </summary>
-    public partial class DialogValidateRdl 
+    public partial class DialogValidateRdl
     {
-        private readonly string SCHEMA2003 = "http://schemas.microsoft.com/sqlserver/reporting/2003/10/reportdefinition";
-        private readonly string SCHEMA2003NAME = "http://schemas.microsoft.com/sqlserver/reporting/2003/10/reportdefinition/ReportDefinition.xsd";
-        private readonly string SCHEMA2005 = "http://schemas.microsoft.com/sqlserver/reporting/2005/01/reportdefinition";
-        private readonly string SCHEMA2005NAME = "http://schemas.microsoft.com/sqlserver/reporting/2005/01/reportdefinition/ReportDefinition.xsd";
-        static internal readonly string MSDESIGNERSCHEMA = "http://schemas.microsoft.com/SQLServer/reporting/reportdesigner";
-        static internal readonly string DESIGNERSCHEMA = "http://www.fyireporting.com/schemas";
+        internal const string SCHEMA2025 =
+            "https://reporting.majorsilence.com/schemas/reporting/2025/12/reportdefinition";
+
+        private const string SCHEMA2025NAME =
+            "https://reporting.majorsilence.com/schemas/reporting/2025/12/reportdefinition/ReportDefinition.xsd";
 
         private int _ValidationErrorCount;
         private int _ValidationWarningCount;
 
-        internal DialogValidateRdl(RdlDesigner designer)
+        public DialogValidateRdl(RdlDesigner designer)
         {
             _RdlDesigner = designer;
             //
@@ -58,17 +35,17 @@ namespace Majorsilence.Reporting.RdlDesign
             return;
         }
 
+        // csharp
         private void bValidate_Click(object sender, System.EventArgs e)
         {
             MDIChild mc = _RdlDesigner.ActiveMdiChild as MDIChild;
-			if (mc == null || mc.DesignTab != DesignTabs.Edit)
+            if (mc == null || mc.DesignTab != DesignTabs.Edit)
             {
                 MessageBox.Show(Strings.DialogValidateRdl_ShowC_SelectRDLTab);
                 return;
             }
+
             string syntax = mc.SourceRdl;
-            bool bNone = true;
-            bool b2005 = true;
             Cursor saveCursor = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
             StringReader sr = null;
@@ -77,25 +54,6 @@ namespace Majorsilence.Reporting.RdlDesign
 
             try
             {
-                // Find the namespace information in the <Report> element.
-                //   We could be more precise and really parse it but it doesn't really help
-                //   since we don't know the name and location of where the actual .xsd file is
-                //   in the general case.  (e.g. xmlns="..." doesn't contain name of the .xsd file.
-                int ir = syntax.IndexOf("<Report");
-                if (ir >= 0)
-                {
-                    int er = syntax.IndexOf(">", ir);
-                    if (er >= 0)
-                    {
-                        if (syntax.IndexOf("xmlns", ir, er - ir) >= 0)
-                        {
-                            bNone = false;
-                            if (syntax.IndexOf("2005", ir, er - ir) < 0)
-                                b2005 = false;
-                        }
-                    }
-                }
-
                 _ValidationErrorCount = 0;
                 _ValidationWarningCount = 0;
                 this.lbSchemaErrors.Items.Clear();
@@ -104,27 +62,29 @@ namespace Majorsilence.Reporting.RdlDesign
                 XmlReaderSettings xrs = new XmlReaderSettings();
                 xrs.ValidationEventHandler += new ValidationEventHandler(ValidationHandler);
                 xrs.ValidationFlags = XmlSchemaValidationFlags.AllowXmlAttributes |
-                    XmlSchemaValidationFlags.ProcessIdentityConstraints |
-                    XmlSchemaValidationFlags.ProcessSchemaLocation |
-                    XmlSchemaValidationFlags.ProcessInlineSchema;
+                                      XmlSchemaValidationFlags.ProcessIdentityConstraints |
+                                      XmlSchemaValidationFlags.ProcessSchemaLocation |
+                                      XmlSchemaValidationFlags.ProcessInlineSchema;
+                
+                string designerPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ReportDefinition.xsd");
 
-                // add any schemas needed
-                if (!bNone)
+                using (var fs = File.OpenRead(designerPath))
+                using (var dsr = XmlReader.Create(fs))
                 {
-                    if (b2005)
-                        xrs.Schemas.Add(SCHEMA2005, SCHEMA2005NAME);
-                    else
-                        xrs.Schemas.Add(SCHEMA2003, SCHEMA2003NAME);
+                    XmlSchema designerSchema = XmlSchema.Read(dsr, new ValidationEventHandler(ValidationHandler));
+                    if (designerSchema != null)
+                    {
+                        // Add the schema object so its TargetNamespace and includes/imports are preserved
+                        xrs.Schemas.Add(designerSchema);
+                    }
                 }
-                // we always use the designer schema
-                string designerSchema = string.Format("file://{0}{1}", AppDomain.CurrentDomain.BaseDirectory, "Designer.xsd");
-                xrs.Schemas.Add(DESIGNERSCHEMA, designerSchema);
 
                 vr = XmlReader.Create(tr, xrs);
 
                 while (vr.Read()) ;
 
-                this.lbSchemaErrors.Items.Add(string.Format("Validation completed with {0} warnings and {1} errors.", _ValidationWarningCount, _ValidationErrorCount));
+                this.lbSchemaErrors.Items.Add(string.Format("Validation completed with {0} warnings and {1} errors.",
+                    _ValidationWarningCount, _ValidationErrorCount));
             }
             catch (Exception ex)
             {
@@ -141,6 +101,7 @@ namespace Majorsilence.Reporting.RdlDesign
                     vr.Close();
             }
         }
+
 
         public void ValidationHandler(object sender, ValidationEventArgs args)
         {
@@ -167,7 +128,7 @@ namespace Majorsilence.Reporting.RdlDesign
                 if (li < 0)
                     return;
                 v = v.Substring(li + 1);
-                li = v.IndexOf(",");	// find the
+                li = v.IndexOf(","); // find the
                 v = v.Substring(0, li);
 
                 int nLine = Int32.Parse(v);
@@ -177,13 +138,12 @@ namespace Majorsilence.Reporting.RdlDesign
 #if DEBUG
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);	// developer might care about this error??
+                MessageBox.Show(ex.Message); // developer might care about this error??
             }
 #else
 			catch 
 			{}		// user doesn't really care if something went wrong
 #endif
-
         }
 
         private void bClose_Click(object sender, System.EventArgs e)
@@ -191,10 +151,9 @@ namespace Majorsilence.Reporting.RdlDesign
             this.Close();
         }
 
-        private void DialogValidateRdl_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void DialogValidateRdl_Closing(object sender, System.Windows.Forms.FormClosingEventArgs e)
         {
             this._RdlDesigner.ValidateSchemaClosing();
         }
     }
-
 }

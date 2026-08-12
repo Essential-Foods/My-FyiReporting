@@ -1,0 +1,23 @@
+{
+  "name": "@majorsilence/report-designer-react",
+  "version": "1.0.0",
+  "description": "React wrapper for the Majorsilence RDL report designer Web Component",
+  "main": "index.js",
+  "module": "index.mjs",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.mjs",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "prepare": "node -e \"require('fs').copyFileSync('../../wwwroot/rdl-designer/designer.js', 'designer.js')\" && echo 'designer.js copied'"
+  },
+  "sideEffects": false,
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "keywords": ["react", "rdl", "report", "designer", "majorsilence"],
+  "license": "MIT"
+}

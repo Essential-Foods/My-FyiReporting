@@ -1,42 +1,64 @@
-﻿using NUnit.Framework;
+using Majorsilence.Reporting.Rdl;
+using NUnit.Framework;
+using ReportTests.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace ReportTests
 {
+    [TestFixture]
     public class FunctionTest
     {
-        [Test()]
-        public void Test1()
+        private Uri _reportFolder;
+
+        [SetUp]
+        public void SetUp()
         {
-            // disable test.  travis ci does not have x11
-            //string cwd = System.Environment.CurrentDirectory;
-           
-            //var rdlView = new Majorsilence.Reporting.RdlViewer.RdlViewer();
-            //rdlView.SourceFile = new Uri(System.IO.Path.Combine(cwd,"Reports", "FunctionTest.rdl"));
-            //rdlView.Parameters += string.Format("ConnectionString={0}", DatabaseInfo.Connection);
-            //rdlView.Rebuild();
+            _reportFolder = GeneralUtils.ReportsFolder();
+            RdlEngineConfig.RdlEngineConfigInit();
+        }
 
-            ////foreach (string msg in rdlView.ErrorMessages)
-            ////{
-            ////    Assert.True(msg.Contains("expression") == false);
-            ////}
+        // Renders FunctionTest.rdl headlessly to verify Mid(), Left(), and field
+        // expression evaluation work without requiring a GUI or X11.
+        [Test]
+        public async Task RdlStringFunctions_RenderToPdf_ProducesNonEmptyOutput()
+        {
+            Uri fileRdlUri = new Uri(_reportFolder, "FunctionTest.rdl");
+            System.IO.Directory.SetCurrentDirectory(_reportFolder.LocalPath);
 
-            //string pdf = System.IO.Path.Combine(cwd, "Test1.pdf");
+            Report rap = await RdlUtils.GetReport(fileRdlUri, DatabaseInfo.Connection);
+            Assert.That(rap, Is.Not.Null, "Report failed to parse");
+            Assert.That(rap.ErrorMaxSeverity, Is.LessThanOrEqualTo(4), "Report has fatal parse errors");
 
-            //if (System.IO.File.Exists(pdf))
-            //{
-            //    System.IO.File.Delete(pdf);
-            //}
+            rap.Folder = _reportFolder.LocalPath;
+            await rap.RunGetData();
 
-            //rdlView.SaveAs(pdf, Majorsilence.Reporting.Rdl.OutputPresentationType.PDF);
+            using var ms = new MemoryStreamGen();
+            await rap.RunRender(ms, OutputPresentationType.RenderPdf_iTextSharp);
 
-            
-            
-            //Assert.True(System.IO.File.Exists(pdf));
+            var stream = ms.GetStream();
+            Assert.That(stream, Is.Not.Null);
+            Assert.That(stream.Length, Is.GreaterThan(0), "Rendered PDF is empty");
+        }
 
+        [Test]
+        public async Task RdlStringFunctions_RenderToHtml_ContainsExpectedData()
+        {
+            Uri fileRdlUri = new Uri(_reportFolder, "FunctionTest.rdl");
+            System.IO.Directory.SetCurrentDirectory(_reportFolder.LocalPath);
+
+            Report rap = await RdlUtils.GetReport(fileRdlUri, DatabaseInfo.Connection);
+            Assert.That(rap, Is.Not.Null, "Report failed to parse");
+
+            rap.Folder = _reportFolder.LocalPath;
+            await rap.RunGetData();
+
+            using var ms = new MemoryStreamGen();
+            await rap.RunRender(ms, OutputPresentationType.HTML);
+
+            string html = ms.GetText();
+            Assert.That(html, Is.Not.Null.And.Not.Empty);
+            Assert.That(html, Does.Contain("Function Test"));
         }
     }
 }

@@ -13,18 +13,32 @@ namespace SampleApp2_SetData
 {
     public partial class Form1 : Form
     {
+        private Majorsilence.Reporting.RdlViewer.RdlViewer rdlViewerSourceRdlNoLoad;
+        private Majorsilence.Reporting.RdlViewer.RdlViewer rdlViewerSetSource;
+
         public Form1()
         {
             InitializeComponent();
-            rdlViewer1 = new fyiReporting.RdlViewer.RdlViewer();
-            rdlViewer1.Dock = DockStyle.Fill;
-            this.Controls.Add(rdlViewer1);
+            var split = new SplitContainer();
+            split.Dock = DockStyle.Fill;
+            this.Controls.Add(split);
+
+            rdlViewerSourceRdlNoLoad = new Majorsilence.Reporting.RdlViewer.RdlViewer();
+            rdlViewerSourceRdlNoLoad.Dock = DockStyle.Fill;
+            split.Panel1.Controls.Add(rdlViewerSourceRdlNoLoad);
+            rdlViewerSetSource = new Majorsilence.Reporting.RdlViewer.RdlViewer();
+            rdlViewerSetSource.Dock = DockStyle.Fill;
+            split.Panel2.Controls.Add(rdlViewerSetSource);
+
+            // 50% left, 50% right
+            split.SplitterDistance = split.Width / 2;
         }
 
         private async void Form1_Load(object sender, EventArgs e)
         {
             // TODO: You must change this connection string to match where your database is
-            string sqlFile = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\", @"..\", @"..\", @"..\", @"..\", "northwindEF.db");
+            string sqlFile = System.IO.Path.Combine(AppContext.BaseDirectory, @"..\", @"..\", @"..\",
+                @"..\", @"..\", "northwindEF.db");
             string connectionString = $"Data Source={sqlFile}";
 
             using SqliteConnection cn = new SqliteConnection(connectionString);
@@ -34,36 +48,52 @@ namespace SampleApp2_SetData
             cmd.Connection = cn;
             DataTable dt = await GetTable(cmd);
 
-            string filepath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SampleApp2-TestReport.rdl");
-            await rdlViewer1.SetSourceFile(new Uri(filepath));
-            await (await rdlViewer1.Report()).DataSets["Data"].SetData(dt);
-            await rdlViewer1.Rebuild();
+            string filepath =
+                System.IO.Path.Combine(AppContext.BaseDirectory, "SampleApp2-TestReport.rdl");
+
+            await ExampleViaSourceRdlNoLoad(filepath, dt);
+            await ExampleViaSetSourceFile(filepath, dt);
+        }
+
+        private async Task ExampleViaSourceRdlNoLoad(string filepath, DataTable dt)
+        {
+            rdlViewerSourceRdlNoLoad.SourceRdlNoLoad = System.IO.File.ReadAllText(filepath);
+            rdlViewerSourceRdlNoLoad.Parameters = "";
+            var rpt = await rdlViewerSourceRdlNoLoad.Report();
+            await rpt.DataSets["Data"].SetData(dt);
+            await rdlViewerSourceRdlNoLoad.Rebuild();
+        }
+
+        private async Task ExampleViaSetSourceFile(string filepath, DataTable dt)
+        {
+            await rdlViewerSetSource.SetSourceFile(new Uri(filepath));
+            var rpt = await rdlViewerSetSource.Report();
+            await rpt.DataSets["Data"].SetData(dt);
+            await rdlViewerSetSource.Rebuild();
         }
 
 
-        public async Task<DataTable> GetTable(SqliteCommand cmd)
+        private async Task<DataTable> GetTable(SqliteCommand cmd)
         {
             System.Data.ConnectionState original = cmd.Connection.State;
             if (cmd.Connection.State == ConnectionState.Closed)
             {
-                cmd.Connection.Open();
+                await cmd.Connection.OpenAsync();
             }
 
             DataTable dt = new DataTable();
-            SqliteDataReader dr;
-
-            dr = await cmd.ExecuteReaderAsync();
-            dt.Load(dr);
-            dr.Close();
-            dr.Dispose();
-
-            if (original == ConnectionState.Closed)
+            using (var dr = await cmd.ExecuteReaderAsync())
             {
-                cmd.Connection.Close();
+                dt.Load(dr);
+                dr.Close();
+
+                if (original == ConnectionState.Closed)
+                {
+                    cmd.Connection.Close();
+                }
+
+                return dt;
             }
-
-            return dt;
         }
-
     }
 }

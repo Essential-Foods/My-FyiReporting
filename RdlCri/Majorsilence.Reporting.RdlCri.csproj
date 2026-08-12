@@ -1,18 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Library</OutputType>
-        <RootNamespace>fyiReporting.CRI</RootNamespace>
+        <RootNamespace>Majorsilence.Reporting.Cri</RootNamespace>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <AssemblyTitle>RdlCri</AssemblyTitle>
         <Description>RDL Project CustomReportItem Library</Description>
         <DelaySign>false</DelaySign>
         <PackageId>Majorsilence.Reporting.RdlCri</PackageId>
         <Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
-		<TargetFrameworks>net8.0</TargetFrameworks>
+		<TargetFrameworks>net48;net8.0;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(OS)' == 'Unix'">net8.0;net10.0</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<BaseOutputPath>E:\Repositories\My-FyiReporting\RdlCri\bin</BaseOutputPath>
 		<Platforms>AnyCPU;x86</Platforms>
+        <IsPackable>true</IsPackable>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFramework)' != 'net48'">
+        <IsAotCompatible>true</IsAotCompatible>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     </PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug-DrawingCompat' Or '$(Configuration)' == 'Release-DrawingCompat'">
 		<PackageId>Majorsilence.Reporting.RdlCri.SkiaSharp</PackageId>
@@ -26,10 +33,10 @@
         <PackageReference Include="System.Security.Cryptography.Xml" />
         <PackageReference Include="ZXing.Net" />
     </ItemGroup>
-	<ItemGroup>
+	<ItemGroup Condition="('$(Configuration)' != 'Debug-DrawingCompat' And '$(Configuration)' != 'Release-DrawingCompat') And '$(OS)' == 'Windows_NT'">
 		<PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" />
 	</ItemGroup>
-	<ItemGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'Debug-DrawingCompat' Or '$(Configuration)' == 'Release-DrawingCompat' Or '$(OS)' != 'Windows_NT'">
 		<PackageReference Include="ZXing.Net.Bindings.SkiaSharp" />
 	</ItemGroup>
 		

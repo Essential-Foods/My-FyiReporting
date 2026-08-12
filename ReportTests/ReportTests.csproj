@@ -1,29 +1,52 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<UseWindowsForms>true</UseWindowsForms>
-		<ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
-		<Configurations>Debug;Release;Debug-DrawingCompat</Configurations>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
+		<TargetFrameworks>net48;net8.0;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(OS)' == 'Unix'">net8.0;net10.0</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
+		<Platforms>AnyCPU</Platforms>
+        <IsPackable>false</IsPackable>
 	</PropertyGroup>
+    <ItemGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">
+        <ProjectReference Include="..\EncryptionProvider\EncryptionProvider.csproj" />
+    </ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\DataProviders\Majorsilence.Reporting.DataProviders.csproj" />
+		<ProjectReference Include="..\Majorsilence.Drawing.Common\Majorsilence.Drawing.Common.csproj" />
 		<ProjectReference Include="..\RdlCmd\RdlCmd.csproj" />
 		<ProjectReference Include="..\RdlCri\Majorsilence.Reporting.RdlCri.csproj" />
-		<ProjectReference Include="..\RdlDesign\ReportDesigner.csproj" />
-		<ProjectReference Include="..\RdlDesktop\RdlDesktop.csproj" />
 		<ProjectReference Include="..\RdlEngine\Majorsilence.Reporting.RdlEngine.csproj" />
-		<ProjectReference Include="..\RdlMapFile\RdlMapFile.csproj" />
-		<ProjectReference Include="..\RdlReader\RdlReader.csproj" />
-		<ProjectReference Include="..\RdlViewer\RdlViewer.csproj" />
-		<ProjectReference Include="..\EncryptionProvider\EncryptionProvider.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="Reports\BaseTestReport.rdl">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="Reports\ListReport.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\RunningValueScopeTest.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\CanShrinkTest.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\CanShrinkTestOff.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\HtmlTextboxTest.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\SetDataRebuildTest.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\CanGrowPageTest.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\ParamHeaderTest.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\CanGrowSplitTest.rdl">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="Reports\MatrixExample.rdl">
@@ -42,17 +65,34 @@
 			<Link>Reports\northwindEF.db</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+        <None Include="..\Examples\SqliteExamples\sqlitetestdb2.db">
+            <Link>Reports\sqlitetestdb2.db</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
 		<None Update="Reports\LineObjects.rdl">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="Reports\ChartTypes.rdl">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<None Update="Reports\logo-example.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\meeting-minutes1-a4.rdl">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\meeting-minutes-data.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="..\RdlEngine\RdlEngineConfig.xml">
 			<Link>RdlEngineConfig.xml</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\Examples\SqliteExamples\barcode.rdl">
+		  <Link>Reports\barcode.rdl</Link>
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<Content Include="Reports\WorldFacts.xml">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -63,11 +103,17 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="DocumentFormat.OpenXml" />
+		<PackageReference Include="Microsoft.Data.SqlClient" />
 		<PackageReference Include="Microsoft.Data.Sqlite" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="Npgsql" />
 		<PackageReference Include="NUnit" />
 		<PackageReference Include="NUnit3TestAdapter" />
-		<PackageReference Include="coverlet.collector" />
+		<PackageReference Include="coverlet.collector">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="PdfPig" />
 		<PackageReference Include="SharpZipLib" />
 	</ItemGroup>
 </Project>

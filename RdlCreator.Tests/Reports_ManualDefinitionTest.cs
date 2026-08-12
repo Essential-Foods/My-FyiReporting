@@ -30,7 +30,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
             var report = GenerateTestData();
             var fyiReport = await create.GenerateRdl(report);
             using var ms = new Majorsilence.Reporting.Rdl.MemoryStreamGen();
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ms, Majorsilence.Reporting.Rdl.OutputPresentationType.CSV);
             var text = ms.GetText();
 
@@ -56,7 +56,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
             var report = GenerateTestData();
             var fyiReport = await create.GenerateRdl(report);
             using var ms = new Majorsilence.Reporting.Rdl.MemoryStreamGen();
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ms, Majorsilence.Reporting.Rdl.OutputPresentationType.HTML);
             var text = ms.GetText();
 
@@ -72,7 +72,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
             var report = GenerateTestData();
             var fyiReport = await create.GenerateRdl(report);
             using var ms = new Majorsilence.Reporting.Rdl.MemoryStreamGen();
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ms, Majorsilence.Reporting.Rdl.OutputPresentationType.PDF);
             var pdfStream = ms.GetStream();
 
@@ -91,7 +91,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
             var report = GenerateTestData();
             var fyiReport = await create.GenerateRdl(report);
             using var ms = new Majorsilence.Reporting.Rdl.MemoryStreamGen();
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ms, Majorsilence.Reporting.Rdl.OutputPresentationType.PDF);
             var pdfStream = ms.GetStream();
             pdfStream.Position = 0;
@@ -121,8 +121,12 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
                 Description = "Sample report",
                 Author = "John Doe",
                 PageHeight = "11in",
-                PageWidth = "8.5in",
-                Width = "7.5in",
+                PageWidth = new ReportItemSize()
+                {
+                    Value = 8.5f,
+                    Unit = SizeUnit.Inches
+                },
+                Width = ReportItemSize.FromInches(7.5f),
                 TopMargin = ".25in",
                 LeftMargin = ".25in",
                 RightMargin = ".25in",

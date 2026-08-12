@@ -1,65 +1,92 @@
-﻿using System;
+#if NET48
+using System;
 using EncryptionProvider.String;
 using NUnit.Framework;
 
 namespace ReportTests
 {
-    [TestFixture()]
+    [TestFixture]
     public class StringEncryptionTests
     {
-        [Test()]
-        public void DecryptTest()
+        private const string Key1 = "AAECAwQFBgcICQoLDA0ODw==";
+        private const string Key2 = "CCECAwQFBgcICQoLDA0ODw==";
+        private const string PlainText = "Testing123!£$";
+
+        [Test]
+        public void Decrypt_AfterEncrypt_ReturnsOriginalString()
         {
-            // Arrange
-            // var pass = "Your+Secret+Static+Encryption+Key+Goes+Here=";
-            var pass = "AAECAwQFBgcICQoLDA0ODw==";
-
-            // var pass2 = "This is a test key";
-            var pass2 = "CCECAwQFBgcICQoLDA0ODw==";
-            var subject = new StringEncryption(pass);
-            var subject2 = new StringEncryption(pass2);
-            var originalString = "Testing123!£$";
-
-            // Act
-            var encryptedString1 = subject.Encrypt(originalString);
-            var encryptedString2 = subject.Encrypt(originalString);
-            var decryptedString1 = subject.Decrypt(encryptedString1);
-            var decryptedString2 = subject.Decrypt(encryptedString2);
-
-            var encryptedString3 = subject2.Encrypt(originalString);
-            var encryptedString4 = subject2.Encrypt(originalString);
-            var decryptedString3 = subject2.Decrypt(encryptedString3);
-            var decryptedString4 = subject2.Decrypt(encryptedString4);
-
-            // Assert
-            Assert.That(originalString, Is.EqualTo(decryptedString1), "Decrypted string should match original string");
-            Assert.That(originalString, Is.EqualTo(decryptedString2), "Decrypted string should match original string");
-            Assert.That(originalString, Is.EqualTo(decryptedString3), "Decrypted string should match original string");
-            Assert.That(originalString, Is.EqualTo(decryptedString4), "Decrypted string should match original string");
-
-
+            var subject = new StringEncryption(Key1);
+            var encrypted = subject.Encrypt(PlainText);
+            Assert.That(subject.Decrypt(encrypted), Is.EqualTo(PlainText));
         }
 
-        [Test()]
-        public void EncryptTest()
+        [Test]
+        public void Encrypt_ProducesDifferentCiphertextEachTime()
         {
-            var pass = "Your+Secret+Static+Encryption+Key+Goes+Here=";
-            var pass2 = "This is a test key";
-            var subject = new StringEncryption(pass);
-            var subject2 = new StringEncryption(pass2);
-            var originalString = "Testing123!£$";
+            var subject = new StringEncryption(Key1);
+            var first = subject.Encrypt(PlainText);
+            var second = subject.Encrypt(PlainText);
+            Assert.That(first, Is.Not.EqualTo(second), "Each encryption call must produce a unique ciphertext (random IV)");
+        }
 
-            // Act
-            var encryptedString1 = subject.Encrypt(originalString);
-            var encryptedString2 = subject.Encrypt(originalString);
-            var encryptedString3 = subject.Encrypt(originalString);
-            var encryptedString4 = subject.Encrypt(originalString);
+        [Test]
+        public void Encrypted_DoesNotMatchPlaintext()
+        {
+            var subject = new StringEncryption(Key1);
+            Assert.That(subject.Encrypt(PlainText), Is.Not.EqualTo(PlainText));
+        }
 
-            Assert.That(originalString, Is.Not.EqualTo(encryptedString1), "Encrypted string should not match original string");
-            Assert.That(encryptedString1, Is.Not.EqualTo(encryptedString2), "String should never be encrypted the same twice");
-            Assert.That(originalString, Is.Not.EqualTo(encryptedString3), "Encrypted string should not match original string");
-            Assert.That(encryptedString3, Is.Not.EqualTo(encryptedString4), "String should never be encrypted the same twice");
+        [Test]
+        public void DifferentKeys_ProduceDifferentCiphertext()
+        {
+            var s1 = new StringEncryption(Key1);
+            var s2 = new StringEncryption(Key2);
+            Assert.That(s1.Encrypt(PlainText), Is.Not.EqualTo(s2.Encrypt(PlainText)));
+        }
+
+        [Test]
+        public void CrossKey_Decrypt_DoesNotReturnOriginalPlaintext()
+        {
+            var s1 = new StringEncryption(Key1);
+            var s2 = new StringEncryption(Key2);
+            var encrypted = s1.Encrypt(PlainText);
+            // Decrypting with a different key must not silently return the original plaintext.
+            // It will either throw or produce garbage — both are acceptable.
+            try
+            {
+                var result = s2.Decrypt(encrypted);
+                Assert.That(result, Is.Not.EqualTo(PlainText), "Wrong key must not decrypt to original plaintext");
+            }
+            catch (Exception)
+            {
+                // Throwing on wrong-key decryption is also acceptable (e.g. padding exception)
+                Assert.Pass("Decryption with wrong key threw an exception as expected");
+            }
+        }
+
+        [Test]
+        public void EmptyString_EncryptDecrypt_RoundTrips()
+        {
+            var subject = new StringEncryption(Key1);
+            var encrypted = subject.Encrypt("");
+            Assert.That(subject.Decrypt(encrypted), Is.EqualTo(""));
+        }
+
+        [Test]
+        public void LongString_EncryptDecrypt_RoundTrips()
+        {
+            var subject = new StringEncryption(Key1);
+            var longString = new string('x', 10_000);
+            Assert.That(subject.Decrypt(subject.Encrypt(longString)), Is.EqualTo(longString));
+        }
+
+        [Test]
+        public void UnicodeString_EncryptDecrypt_RoundTrips()
+        {
+            var subject = new StringEncryption(Key1);
+            const string unicode = "日本語テスト 🎉 Ünïcödé";
+            Assert.That(subject.Decrypt(subject.Encrypt(unicode)), Is.EqualTo(unicode));
         }
     }
 }
-
+#endif

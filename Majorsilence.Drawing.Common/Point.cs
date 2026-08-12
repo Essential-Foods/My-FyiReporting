@@ -2,7 +2,7 @@
 
 namespace Majorsilence.Drawing
 {
-    public struct Point
+    public struct Point : IEquatable<Point>
     {
         public int X { get; set; }
         public int Y { get; set; }
@@ -13,6 +13,7 @@ namespace Majorsilence.Drawing
             X = x;
             Y = y;
         }
+
         public override string ToString()
         {
             return $"Point [X={X}, Y={Y}]";
@@ -32,12 +33,13 @@ namespace Majorsilence.Drawing
 
         public static Point Empty => new Point(0, 0);
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Point point)
             {
                 return X == point.X && Y == point.Y;
             }
+
             return false;
         }
 
@@ -51,5 +53,16 @@ namespace Majorsilence.Drawing
             return !(left == right);
         }
 
+        public bool Equals(Point other)
+        {
+            return X == other.X && Y == other.Y;
+        }
+
+#if NET6_0_OR_GREATER
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(X, Y);
+        }
+#endif
     }
 }

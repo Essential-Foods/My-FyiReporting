@@ -1,26 +1,3 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
- * Copyright 2011 rcmillard31 (http://www.fyireporting.com/forum/viewtopic.php?t=1103&highlight=threadabortexception)
-
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Collections;
 using System.Collections.Specialized;
@@ -32,8 +9,11 @@ using System.Drawing.Printing;
 using System.Text;
 using EncryptionProvider;
 using EncryptionProvider.String;
+using Majorsilence.Pdf.Security;
 using Majorsilence.Reporting.RdlViewer.Resources;
 using Majorsilence.Reporting.Rdl;
+using Majorsilence.WinformUtils;
+using System.ComponentModel;
 
 namespace Majorsilence.Reporting.RdlViewer
 {
@@ -64,6 +44,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <returns>The content of the sub report (XML content)</returns>
         private CrossDelegate SubReportGetContent = new CrossDelegate();
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public CrossDelegate.GetContent dSubReportGetContent
         {
             get { return SubReportGetContent.SubReportGetContent; }
@@ -82,7 +63,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// Parameters to run the report
         /// </summary>
-        private IDictionary _Parameters = new Dictionary<string, string>();
+        private Dictionary<string, string> _Parameters;
         /// <summary>
         /// The Report
         /// </summary>
@@ -95,6 +76,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// The pages of the report to view
         /// </summary>
         private Pages _pgs;
+        private bool _loadingPages = false;
         /// <summary>
         /// Last load of report failed
         /// </summary>
@@ -186,11 +168,9 @@ namespace Majorsilence.Reporting.RdlViewer
         private bool _ShowParameters = true;
         private bool _ShowWaitDialog = true;
         // show wait dialog when running report
-        private volatile bool _stopWaitDialog = false;
 
         public RdlViewer()
         {
-            this.DoubleBuffered = true;
             // CustomReportItem init 
             RdlEngineConfig.GetCustomReportTypes();
 
@@ -278,6 +258,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// When true printing will compensate for non-printable area of paper
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool UseTrueMargins
         {
             get { return _UseTrueMargins; }
@@ -287,6 +268,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// Show the Wait Dialog when retrieving and rendering report when true.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool ShowWaitDialog
         {
             get { return _ShowWaitDialog; }
@@ -296,6 +278,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// True if Parameter panel should be shown. 
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool ShowParameterPanel
         {
             get
@@ -314,6 +297,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// True when find panel is visible
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool ShowFindPanel
         {
             get
@@ -338,6 +322,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// The color to use when highlighting the current found item
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Color HighlightItemColor
         {
             get { return _DrawPanel.HighlightItemColor; }
@@ -347,6 +332,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// The color to use when highlighting all
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Color HighlightAllColor
         {
             get { return _DrawPanel.HighlightAllColor; }
@@ -356,6 +342,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// The text to highlight when either HighLightAll is on or the HighLightItem is on.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string HighlightText
         {
             get { return _HighlightText; }
@@ -370,6 +357,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// When HighlightText has a value; HighlightAll controls whether
         /// all page items with that text will be highlighted
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool HighlightAll
         {
             get { return _HighlightAll; }
@@ -385,6 +373,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// When HighlightText has a value; HighlightCaseSensitive controls whether
         /// the comparison is case sensitive.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool HighlightCaseSensitive
         {
             get { return _HighlightCaseSensitive; }
@@ -399,6 +388,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// When used with HighlightText; HighlightPageItem will only highlight the selected item.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public PageItem HighlightPageItem
         {
             get { return _HighlightItem; }
@@ -428,6 +418,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// Sets/Returns the page currently showing
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public int PageCurrent
         {
             get
@@ -449,7 +440,7 @@ namespace Majorsilence.Reporting.RdlViewer
                     //					_vScroll.Value = (int)((double)_vScroll.Maximum / _pgs.PageCount * (value -1)); 
 
                     double scrollValue = ((double)_vScroll.Maximum * (value - 1)) / _pgs.PageCount;
-                    _vScroll.Value = (int)Math.Round(scrollValue);
+                    _vScroll.Value = Math.Min((int)Math.Round(scrollValue), _vScroll.Maximum);
 
                     string tt = string.Format("Page {0} of {1}",
                                     (int)(_pgs.PageCount * (long)_vScroll.Value / (double)_vScroll.Maximum) + 1,
@@ -509,6 +500,7 @@ namespace Majorsilence.Reporting.RdlViewer
         ///		ContinuousFacing: Shows 1st page on right side of pane, then alternating 
         ///				with continuous scrolling.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ScrollModeEnum ScrollMode
         {
             get { return _ScrollMode; }
@@ -524,6 +516,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// Enables/Disables the selection tool.  The selection tool allows the user
         /// to select text and images on the display and copy it to the clipboard.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool SelectTool
         {
             get { return _DrawPanel.SelectTool; }
@@ -618,7 +611,6 @@ namespace Majorsilence.Reporting.RdlViewer
             _vScroll.Value = _hScroll.Value = 0;
             if (this.Visible)
             {
-                // HACK: async
                 await LoadPageIfNeeded();
                 this._DrawPanel.Invalidate();
             }
@@ -627,6 +619,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// Do not force report loading 
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string SourceRdlNoLoad
         {
             get { return _SourceRdl; }
@@ -650,6 +643,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// Holds the folder to data source reference files when SourceFileName not available.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Folder
         {
             get { return _Folder; }
@@ -661,6 +655,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// OrderID=10023&OrderDate=10/14/2002
         /// Note: these parameters will override the user specified ones.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Parameters
         {
             get
@@ -670,7 +665,7 @@ namespace Majorsilence.Reporting.RdlViewer
                 // Check for zero to working form designer
                 if (_Parameters != null)
                 {
-                    foreach (DictionaryEntry kvp in _Parameters)
+                    foreach (KeyValuePair<string, string> kvp in _Parameters)
                     {
                         result += String.Format("{0:s}={1:s};", kvp.Key, kvp.Value);
                     }
@@ -687,7 +682,7 @@ namespace Majorsilence.Reporting.RdlViewer
         #region Parameter setting methods
         public void SetReportParametersAmpersandSeparated(string parameterString)
         {
-            _Parameters = new Dictionary<string, string>();
+            _Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (String.IsNullOrEmpty(parameterString))
                 return;
             String[] prms = parameterString.TrimEnd(';').Split('&');
@@ -705,17 +700,17 @@ namespace Majorsilence.Reporting.RdlViewer
 
         public void SetReportParametersAsJson(string jsonParameterString)
         {
-            var dict = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonParameterString);
+            var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(jsonParameterString);
             SetReportParameters(dict);
         }
         
         public void SetReportParameters(IDictionary<string, string> parameters)
         {
-            _Parameters = new Dictionary<string, string>();
+            _Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var parameter in parameters)
             {
-                _Parameters.Add(parameter.Key, parameter.Value);
+                _Parameters[parameter.Key] = parameter.Value;
             }
         }
         #endregion
@@ -775,6 +770,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// Name of the report.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string ReportName
         {
             get
@@ -788,6 +784,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// Zoom factor.  For example, .5 is a 50% reduction, 2 is 200% increase.
         /// Setting this value will force ZoomMode to UseZoom.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public float Zoom
         {
             get { return _zoom; }
@@ -803,6 +800,7 @@ namespace Majorsilence.Reporting.RdlViewer
         /// <summary>
         /// ZoomMode.  Optionally, allows zoom to dynamically change depending on pane size.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ZoomEnum ZoomMode
         {
             get { return _zoomMode; }
@@ -915,16 +913,23 @@ namespace Majorsilence.Reporting.RdlViewer
         /// </summary>
         /// <param name="FileName">Name of the file to be saved to.</param>
         /// <param name="type">Type of file to save.  Should be "pdf", "xml", "html", "mhtml", "csv", "rtf", "excel", "tif".</param>
-        public async Task SaveAs(string FileName, Majorsilence.Reporting.Rdl.OutputPresentationType type)
+        /// <summary>
+        /// Save the file.  The extension determines the type of file to save.
+        /// </summary>
+        /// <param name="FileName">Name of the file to be saved to.</param>
+        /// <param name="type">Type of file to save.  Should be "pdf", "xml", "html", "mhtml", "csv", "rtf", "excel", "tif".</param>
+        /// <param name="security">Optional PDF encryption settings (password, permissions). Ignored for non-PDF output.</param>
+        /// <param name="signature">Optional PKCS#7 digital signature to embed. Ignored for non-PDF output.</param>
+        public async Task SaveAs(string FileName, Majorsilence.Reporting.Rdl.OutputPresentationType type,
+            PdfSecurity? security = null, PdfSignatureOptions? signature = null)
         {
             await LoadPageIfNeeded();
-
 
             OneFileStreamGen sg = new OneFileStreamGen(FileName, true); // overwrite with this name
             if (!(type == OutputPresentationType.PDF || type == OutputPresentationType.PDFOldStyle ||
                 type == OutputPresentationType.TIF || type == OutputPresentationType.TIFBW))
             {
-                var ld = GetParameters();        // split parms into dictionary
+                var ld = await GetParameters();        // split parms into dictionary
                 await _Report.RunGetData(ld);                     // obtain the data (again)
             }
             try
@@ -933,11 +938,11 @@ namespace Majorsilence.Reporting.RdlViewer
                 {
                     case OutputPresentationType.PDF:
                         _Report.ItextPDF = true;
-                        await _Report.RunRenderPdf(sg, _pgs);
+                        await _Report.RunRenderPdf(sg, _pgs, security, signature);
                         break;
                     case OutputPresentationType.PDFOldStyle:
                         _Report.ItextPDF = false;
-                        await _Report.RunRenderPdf(sg, _pgs);
+                        await _Report.RunRenderPdf(sg, _pgs, security, signature);
                         break;
                     case OutputPresentationType.TIF:
                         await _Report.RunRenderTif(sg, _pgs, true);
@@ -1102,10 +1107,11 @@ namespace Majorsilence.Reporting.RdlViewer
             // do we need to scroll vertically?
             if (!(_vScroll.Value <= scroll && _vScroll.Value + _DrawPanel.Height / this.Zoom >= scroll + height))
             {   // item isn't on visible part of window; force scroll
-                _vScroll.Value = Math.Min(scroll, Math.Max(0, _vScroll.Maximum - _DrawPanel.Height));
+                int maxScroll = Math.Max(_vScroll.Minimum, _vScroll.Maximum - _DrawPanel.Height);
+                _vScroll.Value = Math.Min(Math.Max(scroll, _vScroll.Minimum), Math.Min(maxScroll, _vScroll.Maximum));
                 SetScrollControlsV();
                 ScrollEventArgs sa = new ScrollEventArgs(ScrollEventType.ThumbPosition, _vScroll.Maximum + 1); // position is intentionally wrong
-                VerticalScroll(_vScroll, sa);
+                OnVScroll(_vScroll, sa);
             }
 
             // set the horizontal scroll
@@ -1114,10 +1120,11 @@ namespace Majorsilence.Reporting.RdlViewer
             // do we need to scroll horizontally?
             if (!(_hScroll.Value <= scroll && _hScroll.Value + _DrawPanel.Width / this.Zoom >= scroll + width))
             {   // item isn't on visible part of window; force scroll
-                _hScroll.Value = Math.Min(scroll, Math.Max(0, _hScroll.Maximum - _DrawPanel.Width));
+                int maxScroll = Math.Max(_hScroll.Minimum, _hScroll.Maximum - _DrawPanel.Width);
+                _hScroll.Value = Math.Min(Math.Max(scroll, _hScroll.Minimum), Math.Min(maxScroll, _hScroll.Maximum));
                 SetScrollControlsH();
                 ScrollEventArgs sa = new ScrollEventArgs(ScrollEventType.ThumbPosition, _hScroll.Maximum + 1); // position is intentionally wrong
-                HorizontalScroll(_hScroll, sa);
+                OnHScroll(_hScroll, sa);
             }
         }
 
@@ -1259,6 +1266,7 @@ namespace Majorsilence.Reporting.RdlViewer
         // Obtain the Pages by running the report
         private async Task<Report> GetReport()
         {
+            await Task.Yield();   // release UI thread before data fetch + layout
             string prog;
 
             // Obtain the source
@@ -1396,7 +1404,7 @@ namespace Majorsilence.Reporting.RdlViewer
 	<PageHeader>
 		<Height>1 in</Height>
 		<ReportItems>
-			<Textbox><Top>.1in</Top><Value>fyiReporting Software, LLC</Value><Style><FontSize>18pt</FontSize><FontWeight>Bold</FontWeight></Style></Textbox>
+			<Textbox><Top>.1in</Top><Value>Majorsilence Reporting</Value><Style><FontSize>18pt</FontSize><FontWeight>Bold</FontWeight></Style></Textbox>
 			<Textbox><Top>.1in</Top><Left>4.25in</Left><Value>=Globals!ExecutionTime</Value><Style><Format>dddd, MMMM dd, yyyy hh:mm:ss tt</Format><FontSize>12pt</FontSize><FontWeight>Bold</FontWeight></Style></Textbox>
 			<Textbox><Top>.5in</Top><Value>Errors processing report</Value><Style><FontSize>12pt</FontSize><FontWeight>Bold</FontWeight></Style></Textbox>
 		</ReportItems>
@@ -1465,9 +1473,10 @@ namespace Majorsilence.Reporting.RdlViewer
 
         private async Task<Pages> GetPages(Report report)
         {
+            await Task.Yield();   // release UI thread before data fetch + layout
             Pages pgs = null;
 
-            var ld = GetParameters();        // split parms into dictionary
+            var ld = await GetParameters();        // split parms into dictionary
 
             try
             {
@@ -1501,17 +1510,39 @@ namespace Majorsilence.Reporting.RdlViewer
             return pgs;
         }
 
-        private IDictionary GetParameters()
+        private async Task<IDictionary> GetParameters()
         {
+            if (_Report != null && _Report.UserReportParameters != null && _Report.UserReportParameters.Count > 0)
+            {
+                Dictionary<string, object> runtimeParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                foreach (UserReportParameter urp in _Report.UserReportParameters)
+                {
+                    // Honor programmatically-set parameters over runtime/default values.
+                    // Case-insensitive lookup so callers don't need to match RDL casing exactly.
+                    if (_Parameters != null && _Parameters.ContainsKey(urp.Name))
+                        runtimeParams[urp.Name] = _Parameters[urp.Name];
+                    else
+                        runtimeParams[urp.Name] = await urp.GetValueAsync();
+                }
+                // Merge any extra _Parameters entries not covered by UserReportParameters
+                if (_Parameters != null)
+                {
+                    foreach (KeyValuePair<string, string> kvp in _Parameters)
+                    {
+                        if (!runtimeParams.ContainsKey(kvp.Key))
+                            runtimeParams[kvp.Key] = kvp.Value;
+                    }
+                }
+                return runtimeParams;
+            }
             return _Parameters;
         }
 
         private void SetParameterValue(String key, String value)
         {
-            if (_Parameters.Contains(key))
-                _Parameters[key] = value;
-            else
-                _Parameters.Add(key, value);
+            if (_Parameters == null)
+                _Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _Parameters[key] = value;
         }
 
         private string GetRdlSource()
@@ -1559,11 +1590,7 @@ namespace Majorsilence.Reporting.RdlViewer
         {
             try
             {
-                if (System.Environment.OSVersion.Platform != PlatformID.Unix)
-                {
-                    DialogWait wait = new DialogWait(this, StopWaitDialog);
-                    wait.ShowDialog();
-                }
+                this.ShowWaiter();
             }
             catch (ObjectDisposedException)
             {
@@ -1574,39 +1601,27 @@ namespace Majorsilence.Reporting.RdlViewer
                 MessageBox.Show(ex.Message, Strings.RdlViewer_ShowD_Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
-        public bool StopWaitDialog()
-        {
-            return _stopWaitDialog;
-            // This is the callback
-        }
-
+        
         /// <summary>
         /// Call LoadPageIfNeeded when a routine requires the report to be loaded in order
         /// to fulfill the request.
         /// </summary>
         private async Task LoadPageIfNeeded()
         {
-            if (_pgs == null)
+            if (_pgs == null && !_loadingPages)
             {
+                _loadingPages = true;
                 Cursor savec = null;
-                System.Threading.Thread t = null;
                 try
                 {
                     // 15052008 AJM - Updating Render notification window - This could be improved to show current action in the future
                     if (_ShowWaitDialog)
                     {
-                        t = this.Visible ? new Thread(this.showWait) : new Thread(() => { /* do nothing */ });
-                        t.Start();
-
-                        while (!t.IsAlive)
-                        {
-                            System.Threading.Thread.Sleep(1);
-                        }
+                        showWait();
                     }
 
                     savec = this.Cursor;                // this could take a while so put up wait cursor
-                    this.Cursor = Cursors.WaitCursor;              
+                    this.Cursor = Cursors.WaitCursor;
                     _pgs = await GetPages();
                     _DrawPanel.Pgs = _pgs;
                     CalcZoom();                         // this could affect zoom
@@ -1614,15 +1629,10 @@ namespace Majorsilence.Reporting.RdlViewer
                 }
                 finally
                 {
+                    _loadingPages = false;
+                    this.HideWaiter();
                     if (savec != null)
                         this.Cursor = savec;
-                    if (t != null)
-                    {
-                        _stopWaitDialog = true;
-                        t.Join();
-                        _stopWaitDialog = false;
-                    }
-
                 }
                 RdlViewer_Layout(this, null);               // re layout based on new report
             }
@@ -1686,7 +1696,11 @@ namespace Majorsilence.Reporting.RdlViewer
                 v.Parent = _ParameterPanel;
                 v.Width = width;
                 v.Location = new Point(label.Location.X + label.Width + 5, yPos);
-                if (rp.DefaultValue != null)
+                if (_Parameters != null && _Parameters.ContainsKey(rp.Name))
+                {
+                    v.Text = _Parameters[rp.Name];
+                }
+                else if (rp.DefaultValue != null)
                 {
                     StringBuilder sb = new StringBuilder();
                     for (int i = 0; i < rp.DefaultValue.Length; i++)
@@ -1718,6 +1732,7 @@ namespace Majorsilence.Reporting.RdlViewer
             try
             {
                 rp.Value = cb.Text;
+                SetParameterValue(rp.Name, cb.Text);
             }
             catch (ArgumentException ae)
             {
@@ -1738,6 +1753,7 @@ namespace Majorsilence.Reporting.RdlViewer
             try
             {
                 rp.Value = tb.Text;
+                SetParameterValue(rp.Name, tb.Text);
             }
             catch (ArgumentException ae)
             {
@@ -1748,7 +1764,6 @@ namespace Majorsilence.Reporting.RdlViewer
         private async void ParametersViewClick(object sender, System.EventArgs e)
         {
             Cursor.Current = Cursors.WaitCursor;
-            System.Threading.Thread t = null;
             try
             {
                 _RunButton.Enabled = false;
@@ -1789,16 +1804,9 @@ namespace Majorsilence.Reporting.RdlViewer
                 {
                     return;
                 }
-
-                if (_ShowWaitDialog)
-                {
-                    t = new System.Threading.Thread(new System.Threading.ThreadStart(showWait));
-                    t.Start();
-                    while (!t.IsAlive)
-                    {
-                        System.Threading.Thread.Sleep(1);
-                    }
-                }
+                
+                showWait();
+                  
                 _pgs = await GetPages(this._Report);
                 _DrawPanel.Pgs = _pgs;
                 _vScroll.Value = 0;
@@ -1812,16 +1820,12 @@ namespace Majorsilence.Reporting.RdlViewer
             }
             finally
             {
+                this.HideWaiter();
                 _RunButton.Enabled = true;
                 Cursor.Current = Cursors.Default;
-                if (t != null)
-                {
-                    _stopWaitDialog = true;
-                    t.Join();
-                    _stopWaitDialog = false;
-                }
-            }
 
+               
+            }
         }
 
         private void WarningClick(object sender, System.EventArgs e)
@@ -1910,7 +1914,7 @@ namespace Majorsilence.Reporting.RdlViewer
             return;
         }
 
-        private void HorizontalScroll(object sender, System.Windows.Forms.ScrollEventArgs e)
+        private void OnHScroll(object sender, System.Windows.Forms.ScrollEventArgs e)
         {
             if (_hScroll.IsDisposed)
                 return;
@@ -1921,7 +1925,7 @@ namespace Majorsilence.Reporting.RdlViewer
             _DrawPanel.Invalidate();
         }
 
-        private void VerticalScroll(object sender, System.Windows.Forms.ScrollEventArgs e)
+        private void OnVScroll(object sender, System.Windows.Forms.ScrollEventArgs e)
         {
             if (_vScroll.IsDisposed)
                 return;
@@ -1993,8 +1997,8 @@ namespace Majorsilence.Reporting.RdlViewer
                     wvalue = _vScroll.Value + _vScroll.SmallChange;
 
                     //Changed from forum, User: robertopisati http://www.fyireporting.com/forum/viewtopic.php?t=863
-                    float value = Math.Min(_vScroll.Maximum - (_DrawPanel.Height / _zoom), wvalue);
-                    _vScroll.Value = (int)Math.Max(_vScroll.Minimum, value);
+                    int maxScroll = (int)Math.Max(_vScroll.Minimum, _vScroll.Maximum - (_DrawPanel.Height / _zoom));
+                    _vScroll.Value = Math.Min(Math.Max(wvalue, _vScroll.Minimum), Math.Min(maxScroll, _vScroll.Maximum));
                     _DrawPanel.Refresh();
                 }
             }
@@ -2020,8 +2024,8 @@ namespace Majorsilence.Reporting.RdlViewer
                 if (!_vScroll.Enabled)
                     return;
                 int wvalue = _vScroll.Value + _vScroll.SmallChange;
-
-                _vScroll.Value = (int)Math.Min(_vScroll.Maximum - (_DrawPanel.Height / _zoom), wvalue);
+                int maxScroll = (int)Math.Max(_vScroll.Minimum, _vScroll.Maximum - (_DrawPanel.Height / _zoom));
+                _vScroll.Value = Math.Min(Math.Max(wvalue, _vScroll.Minimum), Math.Min(maxScroll, _vScroll.Maximum));
                 _DrawPanel.Refresh();
                 e.Handled = true;
             }
@@ -2029,7 +2033,7 @@ namespace Majorsilence.Reporting.RdlViewer
             {
                 if (!_vScroll.Enabled)
                     return;
-                _vScroll.Value = Math.Max(_vScroll.Value - _vScroll.SmallChange, 0);
+                _vScroll.Value = Math.Max(_vScroll.Value - _vScroll.SmallChange, _vScroll.Minimum);
                 _DrawPanel.Refresh();
                 e.Handled = true;
             }
@@ -2037,8 +2041,8 @@ namespace Majorsilence.Reporting.RdlViewer
             {
                 if (!_vScroll.Enabled)
                     return;
-                _vScroll.Value = Math.Min(_vScroll.Value + _vScroll.LargeChange,
-                    _vScroll.Maximum - _DrawPanel.Height);
+                int maxScroll = Math.Max(_vScroll.Minimum, _vScroll.Maximum - _DrawPanel.Height);
+                _vScroll.Value = Math.Min(Math.Max(_vScroll.Value + _vScroll.LargeChange, _vScroll.Minimum), Math.Min(maxScroll, _vScroll.Maximum));
                 _DrawPanel.Refresh();
                 e.Handled = true;
             }
@@ -2046,7 +2050,7 @@ namespace Majorsilence.Reporting.RdlViewer
             {
                 if (!_vScroll.Enabled)
                     return;
-                _vScroll.Value = Math.Max(_vScroll.Value - _vScroll.LargeChange, 0);
+                _vScroll.Value = Math.Max(_vScroll.Value - _vScroll.LargeChange, _vScroll.Minimum);
                 _DrawPanel.Refresh();
                 e.Handled = true;
             }
@@ -2054,7 +2058,7 @@ namespace Majorsilence.Reporting.RdlViewer
             {
                 if (!_vScroll.Enabled)
                     return;
-                _vScroll.Value = 0;
+                _vScroll.Value = _vScroll.Minimum;
                 _DrawPanel.Refresh();
                 e.Handled = true;
             }
@@ -2078,9 +2082,9 @@ namespace Majorsilence.Reporting.RdlViewer
                 if (!_hScroll.Enabled)
                     return;
                 if (e.Control)
-                    _hScroll.Value = 0;
+                    _hScroll.Value = _hScroll.Minimum;
                 else
-                    _hScroll.Value = Math.Max(_hScroll.Value - _hScroll.SmallChange, 0);
+                    _hScroll.Value = Math.Max(_hScroll.Value - _hScroll.SmallChange, _hScroll.Minimum);
                 _DrawPanel.Refresh();
                 e.Handled = true;
             }
@@ -2089,10 +2093,15 @@ namespace Majorsilence.Reporting.RdlViewer
                 if (!_hScroll.Enabled)
                     return;
                 if (e.Control)
-                    _hScroll.Value = _hScroll.Maximum - _DrawPanel.Width;
+                {
+                    int maxScroll = Math.Max(_hScroll.Minimum, _hScroll.Maximum - _DrawPanel.Width);
+                    _hScroll.Value = Math.Min(maxScroll, _hScroll.Maximum);
+                }
                 else
-                    _hScroll.Value = Math.Min(_hScroll.Value + _hScroll.SmallChange,
-                        _hScroll.Maximum - _DrawPanel.Width);
+                {
+                    int maxScroll = Math.Max(_hScroll.Minimum, _hScroll.Maximum - _DrawPanel.Width);
+                    _hScroll.Value = Math.Min(Math.Max(_hScroll.Value + _hScroll.SmallChange, _hScroll.Minimum), Math.Min(maxScroll, _hScroll.Maximum));
+                }
                 _DrawPanel.Refresh();
                 e.Handled = true;
             }
@@ -2178,12 +2187,18 @@ namespace Majorsilence.Reporting.RdlViewer
 
         public void HideRunButton()
         {
+            // RdlViewer_Layout resets _RunButton.Visible from _ShowParameters on every
+            // layout pass, so the flag must be updated for the change to persist.
+            _ShowParameters = false;
             _RunButton.Visible = false;
+            RdlViewer_Layout(this, null);
         }
 
         public void ShowRunButton()
         {
+            _ShowParameters = true;
             _RunButton.Visible = true;
+            RdlViewer_Layout(this, null);
         }
     }
 

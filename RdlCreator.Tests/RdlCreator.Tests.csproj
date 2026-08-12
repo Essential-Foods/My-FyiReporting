@@ -1,11 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<RootNamespace>fyiReporting.RdlCreator.Tests</RootNamespace>
+		<RootNamespace>Majorsilence.Reporting.RdlCreator.Tests</RootNamespace>
 		<AssemblyName>RdlCreator.Tests</AssemblyName>
-		<Configurations>Debug;Release;Debug-DrawingCompat</Configurations>
-		<TargetFrameworks>net8.0</TargetFrameworks>
+		<Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
+		<TargetFrameworks>net8.0;net10.0</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
+		<Platforms>AnyCPU</Platforms>
+        <IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -20,7 +22,10 @@
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="NUnit" />
 		<PackageReference Include="NUnit3TestAdapter" />
-		<PackageReference Include="coverlet.collector" />
+		<PackageReference Include="coverlet.collector">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="PdfPig" />
 	</ItemGroup>
 
@@ -30,6 +35,9 @@
 
 	<ItemGroup>
 	  <None Update="test-image.jpg">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="*.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>

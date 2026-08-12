@@ -17,11 +17,20 @@ namespace Majorsilence.Reporting.RdlCreator
         {
             var serializer = new XmlSerializer(typeof(Report));
             string xml;
+            
+            #if NET6_OR_GREATER
+            await using (var writer = new Utf8StringWriter())
+            {
+                serializer.Serialize(writer, report);
+                xml = writer.ToString();
+            }
+            #else
             using (var writer = new Utf8StringWriter())
             {
                 serializer.Serialize(writer, report);
                 xml = writer.ToString();
             }
+#endif
 
             var rdlp = new RDLParser(xml);
             var fyiReport = await rdlp.Parse();
@@ -180,6 +189,67 @@ namespace Majorsilence.Reporting.RdlCreator
             return fyiReport;
         }
 
+        
+        
+        private string GetDataProviderString(DataProviders dataProvider)
+        {
+            return dataProvider switch
+            {
+                DataProviders.SqlServer_MicrosoftDataSqlClient => "Microsoft.Data.SqlClient",
+                DataProviders.Oracle => "Oracle",
+#if WINDOWS
+                DataProviders.OleDb => "OLEDB",
+#endif
+                DataProviders.Odbc => "ODBC",
+                DataProviders.Xml => "XML",
+                DataProviders.Text => "Text",
+                DataProviders.MySql => "MySQL.NET",
+                DataProviders.PostgreSQL => "PostgreSQL",
+                DataProviders.SqlServer_SystemData => "SQL",
+                DataProviders.Firebird => "Firebird.NET 2.0",
+                DataProviders.SQLite_MicrosoftData => "Microsoft.Data.Sqlite",
+                DataProviders.SQLite_SystemData => "SQLite",
+                DataProviders.Json => "Json",
+                DataProviders.FileDirectory => "FileDirectory",
+                DataProviders.PostgreSQL_Devart => "PostgreSQL_Devart",
+                _ => throw new ArgumentOutOfRangeException(nameof(dataProvider), dataProvider, null)
+            };
+        }
+        
+        public async Task<Rdl.Report> GenerateRdl(DataProviders dataProvider,
+            string connectionString,
+            string commandText,
+            CommandType commandType = CommandType.Text,
+            string description = "",
+            string author = "",
+            string pageHeight = "11in",
+            string pageWidth = "8.5in",
+            string width = "7.5in",
+            string topMargin = ".25in",
+            string leftMargin = ".25in",
+            string rightMargin = ".25in",
+            string bottomMargin = ".25in",
+            string pageHeaderText = "",
+            string name = "")
+        {
+            string providerString = GetDataProviderString(dataProvider);
+            return await GenerateRdl(providerString, 
+                connectionString, 
+                commandText, 
+                commandType, 
+                description, 
+                author, 
+                pageHeight, 
+                pageWidth, 
+                width,
+                topMargin,
+                leftMargin,
+                rightMargin,
+                bottomMargin,
+                pageHeaderText,
+                name);
+        }
+        
         public async Task<Rdl.Report> GenerateRdl(string dataProvider,
             string connectionString,
             string commandText,
@@ -341,12 +411,10 @@ namespace Majorsilence.Reporting.RdlCreator
                             NoRows = "Query returned no rows!",
                             TableColumns = new TableColumns
                             {
-                                TableColumn = new List<TableColumn>
-                            {
-                                new TableColumn { Width = "1.25in" },
-                                new TableColumn { Width = "1.5in" },
-                                new TableColumn { Width = "1.375in" }
-                            }
+                                TableColumn = fields.Select(f => new TableColumn
+                                {
+                                    Width = "1in" // You can adjust the width as needed
+                                }).ToList()
                             },
                             Header = new Header
                             {

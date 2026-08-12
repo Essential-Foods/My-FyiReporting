@@ -43,8 +43,6 @@
         }
 
         #endregion
-
-        private fyiReporting.RdlViewer.RdlViewer rdlViewer1;
     }
 }
 

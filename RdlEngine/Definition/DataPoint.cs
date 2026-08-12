@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Threading.Tasks;
@@ -64,27 +43,27 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "DataValues":
+					case "datavalues":
 						_DataValues = new DataValues(r, this, xNodeLoop);
 						break;
-					case "DataLabel":
+					case "datalabel":
 						_DataLabel = new DataLabel(r, this, xNodeLoop);
 						break;
-					case "Action":
+					case "action":
 						_Action = new Action(r, this, xNodeLoop);
 						break;
-					case "Style":
+					case "style":
 						_Style = new Style(r, this, xNodeLoop);
 						break;
-					case "Marker":
+					case "marker":
 						_Marker = new Marker(r, this, xNodeLoop);
 						break;
-					case "DataElementName":
+					case "dataelementname":
 						_DataElementName = xNodeLoop.InnerText;
 						break;
-					case "DataElementOutput":
+					case "dataelementoutput":
 						_DataElementOutput = Majorsilence.Reporting.Rdl.DataElementOutput.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
 					default:	

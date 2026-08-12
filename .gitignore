@@ -1,3 +1,4 @@
+python_project_root/
 # Created by https://www.gitignore.io
 
 ### VisualStudio ###
@@ -239,3 +240,17 @@ obj/
 /Examples/SampleAspDotNet/SampleAspDotNet/libSkiaSharp.dll
 /Examples/SampleAspDotNet/SampleAspDotNet/libSkiaSharp.dylib
 .DS_Store
+*.pyc
+/LanguageWrappers/python/Examples/output
+/LanguageWrappers/ruby/Examples/output
+/LanguageWrappers/php/Examples/output
+/Majorsilence.Pdf.Security/out/Majorsilence.Pdf.dll
+/Majorsilence.Pdf.Security/out/Majorsilence.Pdf.Security.dll
+/Majorsilence.Pdf.Security/out/Majorsilence.Pdf.Security.deps.json
+/Majorsilence.Pdf/out/Majorsilence.Pdf.deps.json
+/Majorsilence.Pdf/out/Majorsilence.Pdf.dll
+/ReportTests/Reports/northwindEF.db
+.claude/settings.local.json
+/.claude/worktrees
+/graphify-out
+/artifacts-159

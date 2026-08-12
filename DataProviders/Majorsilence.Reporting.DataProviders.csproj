@@ -1,21 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<ProjectType>Local</ProjectType>
-		<AssemblyKeyContainerName></AssemblyKeyContainerName>
 		<DelaySign>false</DelaySign>
 		<OutputType>Library</OutputType>
 		<RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<AssemblyTitle>RDL Data Providers</AssemblyTitle>
-		<Description></Description>
 		<DelaySign>false</DelaySign>
 		<PackageId>Majorsilence.Reporting.DataProviders</PackageId>
 		<Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
-		<TargetFrameworks>net8.0</TargetFrameworks>
+		<TargetFrameworks>net48;net8.0;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(OS)' == 'Unix'">net8.0;net10.0</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<BaseOutputPath>E:\Repositories\My-FyiReporting\DataProviders\bin</BaseOutputPath>
 		<Platforms>AnyCPU;x86</Platforms>
+        <IsPackable>true</IsPackable>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug-DrawingCompat' Or '$(Configuration)' == 'Release-DrawingCompat'">
 		<PackageId>Majorsilence.Reporting.DataProviders.SkiaSharp</PackageId>
@@ -31,4 +31,11 @@
 			<Name>System.XML</Name>
 		</Reference>
 	</ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+        <Reference Include="System.Net.Http" />
+        <Reference Include="System.Web.Services" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+        <PackageReference Include="System.Text.Json" />
+    </ItemGroup>
 </Project>

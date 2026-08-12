@@ -1,26 +1,3 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
-
 using System;
 using System.Xml;
 using System.IO;
@@ -98,9 +75,9 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "Type":
+					case "type":
 						_Type = ChartType.GetStyle(xNodeLoop.InnerText);
 						if (_Type == ChartTypeEnum.Stock ||
 							_Type == ChartTypeEnum.Unknown)
@@ -108,61 +85,60 @@ namespace Majorsilence.Reporting.Rdl
 							OwnerReport.rl.LogError(8, "Chart type '" + xNodeLoop.InnerText + "' is not currently supported.");
 						}
 						break;
-					case "Subtype":
+					case "subtype":
                         _Subtype = new Expression(r, p, xNodeLoop, ExpressionType.Enum); //AJM GJL 14082008
 						break;
-					case "SeriesGroupings":
+					case "seriesgroupings":
 						_SeriesGroupings = new SeriesGroupings(r, this, xNodeLoop);
 						break;
-					case "CategoryGroupings":
+					case "categorygroupings":
 						_CategoryGroupings = new CategoryGroupings(r, this, xNodeLoop);
 						break;
-					case "ChartData":
+					case "chartdata":
 						_ChartData = new ChartData(r, this, xNodeLoop);
 						break;
-					case "Legend":
+					case "legend":
 						_Legend = new Legend(r, this, xNodeLoop);
 						break;
-					case "CategoryAxis":
+					case "categoryaxis":
 						_CategoryAxis = new CategoryAxis(r, this, xNodeLoop);
 						break;
-					case "ValueAxis":
+					case "valueaxis":
 						_ValueAxis = new ValueAxis(r, this, xNodeLoop);
 						break;
-					case "Title":
+					case "title":
 						_Title = new Title(r, this, xNodeLoop);
 						break;
-					case "PointWidth":
+					case "pointwidth":
 						_PointWidth = XmlUtil.Integer(xNodeLoop.InnerText);
 						break;
-					case "Palette":
+					case "palette":
                         _Palette = new Expression(r, p, xNodeLoop, ExpressionType.Enum); //AJM GJL 14082008
 						break;
-					case "ThreeDProperties":
+					case "threedproperties":
 						_ThreeDProperties = new ThreeDProperties(r, this, xNodeLoop);
 						break;
-					case "PlotArea":
+					case "plotarea":
 						_PlotArea = new PlotArea(r, this, xNodeLoop);
 						break;
-					case "ChartElementOutput":
+					case "chartelementoutput":
 						_ChartElementOutput = Majorsilence.Reporting.Rdl.ChartElementOutput.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-                    case "HyneWonderfulVector": //AJM GJL 14082008
-                    case "RenderAsVector":
-                    case "fyi:RenderAsVector":
+                    case "hynewonderfulvector": //AJM GJL 14082008
+                    case "renderasvector":
+                    case "fyi:renderasvector":
                         _isHYNEsWonderfulVector = new Expression(r,p,xNodeLoop,ExpressionType.Boolean);
                         break;
                     case "fyi:tooltip":
-                    case "fyi:Tooltip":
                         _showTooltips = new Expression(r, p, xNodeLoop, ExpressionType.Boolean);
                         break;
-                    case "fyi:TooltipX":
+                    case "fyi:tooltipx":
                         _showTooltipsX = new Expression(r, p, xNodeLoop, ExpressionType.Boolean);
                         break;
-                    case "fyi:TooltipYFormat":
+                    case "fyi:tooltipyformat":
                         _ToolTipYFormat = new Expression(r, p, xNodeLoop, ExpressionType.Boolean);
                         break;
-                    case "fyi:TooltipXFormat":
+                    case "fyi:tooltipxformat":
                         _ToolTipXFormat = new Expression(r, p, xNodeLoop, ExpressionType.Boolean);
                         break;
 					default:	

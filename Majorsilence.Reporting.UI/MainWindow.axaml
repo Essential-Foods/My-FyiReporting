@@ -1,0 +1,14 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="700"
+        xmlns:viewer1="clr-namespace:Majorsilence.Reporting.UI.RdlAvalonia.Viewer;assembly=Majorsilence.Reporting.UI.RdlAvalonia"
+        x:Class="Majorsilence.Reporting.UI.MainWindow"
+        Title="Report Viewer"
+        MinWidth="640"
+        MinHeight="480"
+        Width="1024"
+        Height="700">
+    <viewer1:AvaloniaReportViewer x:Name="ReportViewer"/>
+</Window>

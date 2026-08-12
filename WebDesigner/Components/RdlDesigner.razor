@@ -1,0 +1,107 @@
+@namespace Majorsilence.Reporting.WebDesigner.Components
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@*
+  Blazor wrapper around the <report-designer> vanilla JS Web Component.
+
+  Usage (Blazor Server / WASM):
+
+    @using Majorsilence.Reporting.WebDesigner.Components
+
+    <RdlDesigner @ref="_designer"
+                 PreviewEndpoint="/rdl-designer/preview"
+                 SaveEndpoint="/rdl-designer/save"
+                 LoadEndpoint="/rdl-designer/load"
+                 style="display:block;height:700px" />
+
+    <button @onclick="GetXml">Get RDL</button>
+
+    @code {
+        RdlDesigner _designer = default!;
+
+        async Task GetXml() {
+            var xml = await _designer.GetRdlAsync();
+            Console.WriteLine(xml);
+        }
+    }
+
+  The component lazy-loads designer.js the first time it mounts — no <script>
+  tag is needed in _Host.cshtml / index.html.
+*@
+
+<report-designer @ref="_el"
+                 preview-endpoint="@PreviewEndpoint"
+                 save-endpoint="@(SaveEndpoint ?? string.Empty)"
+                 load-endpoint="@(LoadEndpoint ?? string.Empty)"
+                 @attributes="AdditionalAttributes">
+</report-designer>
+
+@code {
+    // ── Parameters ───────────────────────────────────────────────────────────
+
+    /// <summary>POST endpoint that renders RDL XML to an HTML preview page.</summary>
+    [Parameter] public string PreviewEndpoint { get; set; } = "/rdl-designer/preview";
+
+    /// <summary>POST endpoint that saves the named RDL file to disk.</summary>
+    [Parameter] public string? SaveEndpoint { get; set; }
+
+    /// <summary>GET endpoint that loads a named RDL file from disk.</summary>
+    [Parameter] public string? LoadEndpoint { get; set; }
+
+    /// <summary>Optional initial RDL XML to load when the component first mounts.</summary>
+    [Parameter] public string? InitialRdl { get; set; }
+
+    /// <summary>Fired after the user successfully saves via the Save… dialog.</summary>
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+
+    /// <summary>Allows arbitrary HTML attributes (e.g. style, class) to pass through to the host element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    // ── Private state ────────────────────────────────────────────────────────
+
+    private ElementReference _el;
+    private IJSObjectReference? _interop;
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _interop = await JS.InvokeAsync<IJSObjectReference>(
+            "import",
+            "/_content/Majorsilence.Reporting.WebDesigner/rdl-designer/designer-interop.js");
+
+        if (!string.IsNullOrWhiteSpace(InitialRdl))
+            await LoadRdlAsync(InitialRdl);
+    }
+
+    // ── Public API ───────────────────────────────────────────────────────────
+
+    /// <summary>Load RDL XML into the designer.</summary>
+    public async Task LoadRdlAsync(string rdlXml)
+    {
+        if (_interop is null) return;
+        await _interop.InvokeVoidAsync("loadRdl", _el, rdlXml);
+    }
+
+    /// <summary>Return the current report as RDL XML.</summary>
+    public async Task<string> GetRdlAsync()
+    {
+        if (_interop is null) return string.Empty;
+        return await _interop.InvokeAsync<string>("getRdl", _el);
+    }
+
+    // ── Disposal ─────────────────────────────────────────────────────────────
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_interop is not null)
+        {
+            try { await _interop.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+        }
+    }
+}

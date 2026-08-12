@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Collections;
 using System.IO;
@@ -311,7 +290,7 @@ namespace Majorsilence.Reporting.Rdl
 		/// <returns></returns>
 		static public string Hex(long o)
 		{
-			return Convert.ToString(o, 16);
+			return Convert.ToString(o, 16).ToUpperInvariant();
 		}
 		/// <summary>
 		/// Returns the octal value of a specified number
@@ -485,7 +464,7 @@ namespace Majorsilence.Reporting.Rdl
 				return 0;
 
 			// TODO this is the brute force method of searching; should use better algorithm
-			bool bCaseSensitive = compare == 1;
+			bool bCaseInsensitive = compare == 1;
 			int inc= start == -1? string1.Length: start;
 			if (inc > string1.Length)
 				inc = string1.Length;
@@ -494,9 +473,9 @@ namespace Majorsilence.Reporting.Rdl
 				int i=string2.Length-1;
 				for ( ; i >= 0; i--)	// match the find string backwards as well
 				{
-					if (bCaseSensitive)
-					{		
-						if (Char.ToLower(string1[inc-string2.Length+i]) != string2[i])
+					if (bCaseInsensitive)
+					{
+						if (Char.ToLower(string1[inc-string2.Length+i]) != Char.ToLower(string2[i]))
 							break;
 					}
 					else
@@ -719,7 +698,7 @@ namespace Majorsilence.Reporting.Rdl
 					if (bReplace)
 					{
 						sb.Insert(inc, replacewith);
-						inc += (replacewith.Length + 1);
+						inc += replacewith.Length;
 					}
 					count--;
 					if (count == 0)			// have we done as many replaces as requested?

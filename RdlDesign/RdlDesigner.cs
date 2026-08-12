@@ -1,40 +1,7 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at 
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
-
-/*
- Changes were made to this file.
- Most changes are marked with "// Josh:", not including the parenthesis
- and followed by a desciprtion of the change. Most strings throughout this
- file that reference a file path have been changed to Uris.
-
- Added support for IPC through IpcChannels instead of the "file" method previously used.
- Added RdlIpcObject or IPC.
-*/
-
-
 using Majorsilence.Reporting.Rdl;
 using Majorsilence.Reporting.RdlDesign.Resources;
 using Majorsilence.Reporting.RdlViewer;
+using Majorsilence.WinformUtils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -47,6 +14,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml;
+using System.Threading.Tasks;
+using System.ComponentModel;
 
 namespace Majorsilence.Reporting.RdlDesign
 {
@@ -67,7 +36,7 @@ namespace Majorsilence.Reporting.RdlDesign
 	public partial class RdlDesigner : IMessageFilter
 	{
 		// The version should match what is set in program.cs
-		static readonly string IpcFileName = string.Format("\\fyiIpcData{0}.txt", typeof(Program).Assembly.GetName().Version.ToString().Replace(".", ""));
+		static readonly string IpcFileName = string.Format("\\fyiIpcData{0}.txt", typeof(RdlDesigner).Assembly.GetName().Version.ToString().Replace(".", ""));
 
 		static readonly string optFileName = Path.Combine(Majorsilence.Reporting.Rdl.Utility.Paths.MajorsilenceRoamingFolder(), "designerstate.xml");
 		SortedList<DateTime, string> _RecentFiles = null;
@@ -79,9 +48,8 @@ namespace Majorsilence.Reporting.RdlDesign
 		private Rdl.NeedPassword _GetPassword;
 		private string _DataSourceReferencePassword = null;
 		private bool bGotPassword = false;
-		private bool bMono = DesignerUtility.IsMono();
-		private readonly string DefaultHelpUrl = "https://github.com/majorsilence/My-FyiReporting/wiki/_pages";
-		private readonly string DefaultSupportUrl = "https://groups.google.com/d/forum/myfyireporting";
+		private readonly string DefaultHelpUrl = "https://github.com/majorsilence/Reporting/wiki/_pages";
+		private readonly string DefaultSupportUrl = "https://github.com/majorsilence/Reporting/discussions";
 		private string _HelpUrl;
 		private string _SupportUrl;
 		static private string[] _MapSubtypes = new string[] { "usa_map" };
@@ -150,13 +118,13 @@ namespace Majorsilence.Reporting.RdlDesign
 		/// You can open as many reports as you want by calling this function. The only limitation is that
 		/// the designer must already be running by having called the Show() function first.
 		/// </remarks>
-		public void OpenFile(string filePath)
+		public async Task OpenFileAsync(string filePath)
 		{
-			this.OpenFile(new Uri(filePath));
+			await this.OpenFileAsync(new Uri(filePath));
 		}
-		public void OpenFile(Uri filePath)
+		public async Task OpenFileAsync(Uri filePath)
 		{
-			CreateMDIChild(filePath, null, false);
+			await CreateMDIChildAsync(filePath, null, false);
 			RecentFilesMenu();
 		}
 
@@ -165,14 +133,19 @@ namespace Majorsilence.Reporting.RdlDesign
 		/// </summary>
 		/// <param name="filePath"></param>
 		/// <param name="connectionString">The connection string that will be used</param>
-		public void OpenFile(string filePath, string connectionString)
+		public async Task OpenFileAsync(string filePath, string connectionString)
 		{
-			OpenFile(new Uri(filePath), connectionString);
+			await OpenFileAsync(new Uri(filePath), connectionString);
 		}
-		public void OpenFile(Uri filePath, string connectionString)
+		public async Task OpenFileAsync(Uri filePath, string connectionString)
 		{
 			XmlDocument xmlDoc = new XmlDocument();
-			xmlDoc.Load(filePath.AbsolutePath);
+            #if NET6_0_OR_GREATER
+            string xml = await File.ReadAllTextAsync(filePath.AbsolutePath);
+            #else
+            string xml = File.ReadAllText(filePath.AbsolutePath);
+            #endif
+			xmlDoc.LoadXml(xml);
 
 			foreach (XmlNode node in xmlDoc.GetElementsByTagName("ConnectString"))
 			{
@@ -181,7 +154,7 @@ namespace Majorsilence.Reporting.RdlDesign
 
 			xmlDoc.Save(filePath.AbsolutePath);
 
-			CreateMDIChild(filePath, null, false);
+			await CreateMDIChildAsync(filePath, null, false);
 			RecentFilesMenu();
 		}
 
@@ -190,6 +163,7 @@ namespace Majorsilence.Reporting.RdlDesign
 
 		public event RdlDesign.RdlDesignerSavedFileEventHandler SavedFileEvent;
 
+        private bool _openPreviousSession;
 		/// <summary>
 		/// Designer constructor.
 		/// </summary>
@@ -197,73 +171,73 @@ namespace Majorsilence.Reporting.RdlDesign
 		/// <param name="openPreviousSession">True or False open the previous reports that were open in the designer.</param>
 		public RdlDesigner(string IpcChannelPortName, bool openPreviousSession)
 		{
-			InitializeComponent();
+            InitializeComponent();
+            _openPreviousSession = openPreviousSession;
+        }
+        
+        private async void RdlDesigner_Load(object sender, EventArgs e)
+        {
+            this.ShowWaiter();
+            KeyPreview = true;
+            await GetStartupStateAsync();
 
-			KeyPreview = true;
-			GetStartupState();
+            // Initialize the recent file menu
+            RecentFilesMenu();
+            propertiesWindowsToolStripMenuItem.Checked = _ShowProperties;
+            IsMdiContainer = true;
+            
+            Application.AddMessageFilter(this);
 
-			// Intialize the recent file menu
-			RecentFilesMenu();
-			propertiesWindowsToolStripMenuItem.Checked = _ShowProperties;
-			IsMdiContainer = true;
+            this.MdiChildActivate += new EventHandler(RdlDesigner_MdiChildActivate);
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.RdlDesigner_Closing);
+            _GetPassword = new Rdl.NeedPassword(this.GetPassword);
 
+            InitToolbar();
 
-			Application.AddMessageFilter(this);
+            //Build CustomItems insert menu
+            BuildCustomItemsInsertMenu(insertToolStripMenuItem);
 
-			this.MdiChildActivate += new EventHandler(RdlDesigner_MdiChildActivate);
-			this.Closing += new System.ComponentModel.CancelEventHandler(this.RdlDesigner_Closing);
-			_GetPassword = new Rdl.NeedPassword(this.GetPassword);
+            // open up the current files if any
+            if (_CurrentFiles != null && _openPreviousSession == true)
+            {
+                foreach (Uri file in _CurrentFiles)
+                {
+                    await CreateMDIChildAsync(file, null, false);
+                }
+                _CurrentFiles = null;       // don't need this any longer
+            }
 
-			InitToolbar();
+            DesignTabChanged(this, new EventArgs());        // force toolbar to get updated
+            this.HideWaiter();
+        }
 
-			//Build CustomItems insert menu
-			BuildCustomItemsInsertMenu(insertToolStripMenuItem);
+        /// <summary>
+        /// Handles mousewheel processing when window under mousewheel doesn't have focus
+        /// </summary>
+        /// <param name="m"></param>
+        /// <returns></returns>
+        public bool PreFilterMessage(ref Message m)
+        {
+            if (m.Msg == 0x20a)
+            {
+                // WM_MOUSEWHEEL, find the control at screen position m.LParam
+                Point pos = new Point(m.LParam.ToInt32() & 0xffff, m.LParam.ToInt32() >> 16);
+                IntPtr hWnd = WindowFromPoint(pos);
+                if (hWnd != IntPtr.Zero && hWnd != m.HWnd && Control.FromHandle(hWnd) != null)
+                {
+                    SendMessage(hWnd, m.Msg, m.WParam, m.LParam);
+                    return true;
+                }
+            }
 
-			// open up the current files if any
-			if (_CurrentFiles != null && openPreviousSession == true)
-			{
-				foreach (Uri file in _CurrentFiles)
-				{
-					CreateMDIChild(file, null, false);
-				}
-				_CurrentFiles = null;       // don't need this any longer
-			}
-
-			DesignTabChanged(this, new EventArgs());        // force toolbar to get updated
-
-		}
-		/// <summary>
-		/// Handles mousewheel processing when window under mousewheel doesn't have focus
-		/// </summary>
-		/// <param name="m"></param>
-		/// <returns></returns>
-		public bool PreFilterMessage(ref Message m)
-		{
-#if MONO
             return false;
-#else
-			if (m.Msg == 0x20a)
-			{
-				// WM_MOUSEWHEEL, find the control at screen position m.LParam
-				Point pos = new Point(m.LParam.ToInt32() & 0xffff, m.LParam.ToInt32() >> 16);
-				IntPtr hWnd = WindowFromPoint(pos);
-				if (hWnd != IntPtr.Zero && hWnd != m.HWnd && Control.FromHandle(hWnd) != null)
-				{
-					SendMessage(hWnd, m.Msg, m.WParam, m.LParam);
-					return true;
-				}
-			}
-			return false;
-#endif
-		}
-#if MONO
-#else
-		// P/Invoke declarations
+        }
+
+        // P/Invoke declarations
 		[DllImport("user32.dll")]
 		private static extern IntPtr WindowFromPoint(Point pt);
 		[DllImport("user32.dll")]
 		private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wp, IntPtr lp);
-#endif
 
 		private DockStyle GetPropertiesDockStyle(string l)
 		{
@@ -346,36 +320,23 @@ namespace Majorsilence.Reporting.RdlDesign
 			MDIChild mc = mainTC.SelectedTab == null ? null : mainTC.SelectedTab.Tag as MDIChild;
 			mdi_Activate(mc);
 		}
-#if MONO
-#else
+
 		[DllImport("user32.dll")]
 		public static extern bool LockWindowUpdate(IntPtr hWndLock);
-#endif
 
 		void mdi_Activate(MDIChild mc)
 		{
 			if (mc == null)
 				return;
-			if (bMono)
-			{
-				mc.Activate();
-				this.Refresh(); //Forces a synchronous redraw of all controls
-			}
-			else
-			{
-#if MONO
-                mc.Activate();
-                this.Refresh(); //Forces a synchronous redraw of all controls
-#else
-				LockWindowUpdate(this.Handle);
-				mc.Activate();
-				this.Refresh(); //Forces a synchronous redraw of all controls
 
-				LockWindowUpdate(IntPtr.Zero);
-#endif
-			}
+			LockWindowUpdate(this.Handle);
+			mc.Activate();
+			this.Refresh(); //Forces a synchronous redraw of all controls
+
+			LockWindowUpdate(IntPtr.Zero);
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal int RecentFilesMax
 		{
 			get { return _RecentFilesMax; }
@@ -392,6 +353,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			get { return _RecentFiles; }
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal string HelpUrl
 		{
 			get
@@ -418,12 +380,14 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal bool ShowPreviewWaitDialog
 		{
 			get { return _ShowPreviewWaitDialog; }
 			set { _ShowPreviewWaitDialog = value; }
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal bool ShowEditLines
 		{
 			get
@@ -436,12 +400,14 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal bool PropertiesAutoHide
 		{
 			get { return _PropertiesAutoHide; }
 			set { _PropertiesAutoHide = value; }
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal DockStyle PropertiesLocation
 		{
 			get
@@ -512,6 +478,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal bool ShowReportItemOutline
 		{
 			get
@@ -524,18 +491,21 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal bool ShowTabbedInterface
 		{
 			get { return _ShowTabbedInterface; }
 			set { _ShowTabbedInterface = value; }
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal NewLineChar XmlNewLine
 		{
 			get => _XmlNewLine;
 			set => _XmlNewLine = value;
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal string SupportUrl
 		{
 			get
@@ -550,7 +520,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
-
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal List<string> Toolbar
 		{
 			get { return _Toolbar; }
@@ -847,7 +817,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			//			Environment.Exit(0);
 		}
 
-		private void menuFileOpen_Click(object sender, EventArgs e)
+		private async void menuFileOpen_Click(object sender, EventArgs e)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
 			OpenFileDialog ofd = new OpenFileDialog();
@@ -872,7 +842,7 @@ namespace Majorsilence.Reporting.RdlDesign
 				{
 					foreach (string file in ofd.FileNames)
 					{
-						CreateMDIChild(new Uri(file), null, false);
+						await CreateMDIChildAsync(new Uri(file), null, false);
 					}
 					RecentFilesMenu();      // update the menu for recent files
 				}
@@ -884,7 +854,7 @@ namespace Majorsilence.Reporting.RdlDesign
 		}
 
 		// Create an MDI child.   Only creates it if not already open.
-		private MDIChild CreateMDIChild(Uri file, string rdl, bool bMenuUpdate)
+		private async Task<MDIChild> CreateMDIChildAsync(Uri file, string rdl, bool bMenuUpdate)
 		{
 			MDIChild mcOpen = null;
 			if (file != null)
@@ -920,7 +890,7 @@ namespace Majorsilence.Reporting.RdlDesign
 					if (file != null)
 					{
 						mc.Viewer.Folder = Path.GetDirectoryName(file.LocalPath);
-						mc.SourceFile = file;
+						await mc.SetSourceFileAsync(file);
 						mc.Text = Path.GetFileName(file.LocalPath);
 						mc.DrawCtl.Folder = Path.GetDirectoryName(file.LocalPath);
 						mc.Viewer.ReportName = Path.GetFileNameWithoutExtension(file.LocalPath);
@@ -944,7 +914,7 @@ namespace Majorsilence.Reporting.RdlDesign
 					tp.ToolTipText = file == null ? "" : file.LocalPath;
 					mainTC.Controls.Add(tp);
 					mc.Tab = tp;
-
+                    
 					mc.Show();
 					mcOpen = mc;
 
@@ -1328,7 +1298,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
-		private void OpenSubReportEvent(object sender, SubReportEventArgs e)
+		private async void OpenSubReportEvent(object sender, SubReportEventArgs e)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
 			if (mc == null)
@@ -1344,7 +1314,7 @@ namespace Majorsilence.Reporting.RdlDesign
 				file = new Uri(file.LocalPath + Path.DirectorySeparatorChar + e.SubReportName + ".rdl");
 			}
 
-			CreateMDIChild(file, null, true);
+			await CreateMDIChildAsync(file, null, true);
 		}
 
 		private void HeightChanged(object sender, HeightEventArgs e)
@@ -1615,7 +1585,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
-		private void menuFileNewReport_Click(object sender, System.EventArgs e)
+		private async void menuFileNewReport_Click(object sender, System.EventArgs e)
 		{
 			using (DialogDatabase dlgDB = new DialogDatabase(this))
 			{
@@ -1629,7 +1599,7 @@ namespace Majorsilence.Reporting.RdlDesign
 				string rdl = dlgDB.ResultReport;
 
 				// Create the MDI child using the RDL syntax the wizard generates
-				MDIChild mc = CreateMDIChild(null, rdl, false);
+				MDIChild mc = await CreateMDIChildAsync(null, rdl, false);
 				mc.Modified = true;
 				// Force building of report names for new reports
 				if (mc.DrawCtl.ReportNames == null) { }
@@ -1727,96 +1697,104 @@ namespace Majorsilence.Reporting.RdlDesign
 			return;
 		}
 
-		private void exportToolStripMenuItemCsv_Click(object sender, EventArgs e)
+		private async void exportToolStripMenuItemCsv_Click(object sender, EventArgs e)
+		{
+			MDIChild mc = this.ActiveMdiChild as MDIChild;
+			if (mc == null)
+				return;
+            
+            await ShowSaveInProgressAsync(mc.Tab.Text,async () => {
+                await mc.ExportAsync(Rdl.OutputPresentationType.CSV);
+            });
+		}
+
+		private async void exportToolStripMenuItemExcel_Click(object sender, EventArgs e)
+		{
+			MDIChild mc = this.ActiveMdiChild as MDIChild;
+			if (mc == null)
+				return;
+            
+            await ShowSaveInProgressAsync(mc.Tab.Text,async () => {
+                await mc.ExportAsync(Rdl.OutputPresentationType.ExcelTableOnly);
+            });
+		}
+
+		private async void exportToolStripMenuItemRtf_Click(object sender, EventArgs e)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
 			if (mc == null)
 				return;
 
-			mc.Export(Rdl.OutputPresentationType.CSV);
-			return;
+            await ShowSaveInProgressAsync(mc.Tab.Text,async () => {
+                await mc.ExportAsync(Rdl.OutputPresentationType.RTF);
+            });
 		}
 
-		private void exportToolStripMenuItemExcel_Click(object sender, EventArgs e)
+		private async void exportToolStripMenuItemXml_Click(object sender, EventArgs e)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
 			if (mc == null)
 				return;
 
-			mc.Export(Rdl.OutputPresentationType.ExcelTableOnly);
-			return;
+            await ShowSaveInProgressAsync(mc.Tab.Text,async () => {
+                await mc.ExportAsync(Rdl.OutputPresentationType.XML);
+            });
 		}
 
-		private void exportToolStripMenuItemRtf_Click(object sender, EventArgs e)
+		private async void exportToolStripMenuItemHtml_Click(object sender, EventArgs e)
+		{
+			MDIChild mc = this.ActiveMdiChild as MDIChild;
+			if (mc == null)
+				return;
+            
+            await ShowSaveInProgressAsync(mc.Tab.Text,async () => {
+                await mc.ExportAsync(Rdl.OutputPresentationType.HTML);
+            });
+		}
+
+		private async void exportToolStripMenuItemMHtml_Click(object sender, EventArgs e)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
 			if (mc == null)
 				return;
 
-			mc.Export(Rdl.OutputPresentationType.RTF);
-			return;
+            await ShowSaveInProgressAsync(mc.Tab.Text,async () => {
+                await mc.ExportAsync(Rdl.OutputPresentationType.MHTML);
+            });
 		}
 
-		private void exportToolStripMenuItemXml_Click(object sender, EventArgs e)
+		private async void exportToolStripMenuItemPdf_Click(object sender, EventArgs e)
+		{
+			await PdfExportAsync(false);
+		}
+
+		private async Task PdfExportAsync(bool oldStyle)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
 			if (mc == null)
 				return;
 
-			mc.Export(Rdl.OutputPresentationType.XML);
-			return;
+            await ShowSaveInProgressAsync(mc.Tab.Text,async () => {
+			    if (oldStyle)
+			    {
+				    await mc.ExportAsync(Rdl.OutputPresentationType.PDFOldStyle);
+			    }
+			    else
+			    {
+				    await mc.ExportAsync(Rdl.OutputPresentationType.PDF);
+			    }
+            });
 		}
 
-		private void exportToolStripMenuItemHtml_Click(object sender, EventArgs e)
+		private async void exportToolStripMenuItemTif_Click(object sender, EventArgs e)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
 			if (mc == null)
 				return;
 
-			mc.Export(Rdl.OutputPresentationType.HTML);
-			return;
-		}
-
-		private void exportToolStripMenuItemMHtml_Click(object sender, EventArgs e)
-		{
-			MDIChild mc = this.ActiveMdiChild as MDIChild;
-			if (mc == null)
-				return;
-
-			mc.Export(Rdl.OutputPresentationType.MHTML);
-			return;
-		}
-
-		private void exportToolStripMenuItemPdf_Click(object sender, EventArgs e)
-		{
-			PdfExport(false);
-		}
-
-		private void PdfExport(bool oldStyle)
-		{
-			MDIChild mc = this.ActiveMdiChild as MDIChild;
-			if (mc == null)
-				return;
-
-			if (oldStyle)
-			{
-				mc.Export(Rdl.OutputPresentationType.PDFOldStyle);
-			}
-			else
-			{
-				mc.Export(Rdl.OutputPresentationType.PDF);
-			}
-			return;
-		}
-
-		private void exportToolStripMenuItemTif_Click(object sender, EventArgs e)
-		{
-			MDIChild mc = this.ActiveMdiChild as MDIChild;
-			if (mc == null)
-				return;
-
-			mc.Export(Rdl.OutputPresentationType.TIF);
-			return;
+            await ShowSaveInProgressAsync(mc.Tab.Text,async () => {
+                await mc.ExportAsync(Rdl.OutputPresentationType.TIF);
+            });
 		}
 
 		private void menuFileSaveAs_Click(object sender, EventArgs e)
@@ -2179,8 +2157,17 @@ namespace Majorsilence.Reporting.RdlDesign
 		{
 			try
 			{
-				System.Diagnostics.Process.Start(SupportUrl);
-			}
+                using var p = new System.Diagnostics.Process()
+                {
+                    StartInfo = new ProcessStartInfo()
+                    {
+                        FileName = SupportUrl,
+                        UseShellExecute = true
+                    }
+                };
+                p.Start();
+
+            }
 			catch (Exception ex)
 			{
 				MessageBox.Show(ex.Message + "\n\n" + Strings.RdlDesigner_Show_ResettingSupportURL, Strings.RdlDesigner_Show_SupportURLInvalid);
@@ -2347,17 +2334,17 @@ namespace Majorsilence.Reporting.RdlDesign
 			this.LayoutMdi(MdiLayout.TileVertical);
 		}
 
-		private void menuRecentItem_Click(object sender, System.EventArgs e)
+		private async void menuRecentItem_Click(object sender, System.EventArgs e)
 		{
 			ToolStripMenuItem m = (ToolStripMenuItem)sender;
 
 			int si = m.Text.IndexOf(" ");
 			Uri file = new Uri(m.Text.Substring(si + 1));
 
-			CreateMDIChild(file, null, true);
+			await CreateMDIChildAsync(file, null, true);
 		}
 
-		private void RdlDesigner_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+		private void RdlDesigner_Closing(object sender, System.Windows.Forms.FormClosingEventArgs e)
 		{
 			SaveStartupState();
 			menuToolsCloseProcess(false);
@@ -2424,7 +2411,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
-		private void GetStartupState()
+		private async Task GetStartupStateAsync()
 		{
 			_RecentFiles = new SortedList<DateTime, string>();
 			_CurrentFiles = new List<Uri>();
@@ -2435,7 +2422,12 @@ namespace Majorsilence.Reporting.RdlDesign
 			{
 				XmlDocument xDoc = new XmlDocument();
 				xDoc.PreserveWhitespace = false;
-				xDoc.Load(optFileName);
+                #if NET6_0_OR_GREATER
+                string xml = await System.IO.File.ReadAllTextAsync(optFileName);
+                #else
+                string xml = System.IO.File.ReadAllText(optFileName);
+                #endif
+				xDoc.LoadXml(xml);
 				XmlNode xNode;
 				xNode = xDoc.SelectSingleNode("//designerstate");
 
@@ -3570,13 +3562,6 @@ namespace Majorsilence.Reporting.RdlDesign
 			_TempReportFiles = null;
 		}
 
-
-		private void RdlDesigner_Load(object sender, EventArgs e)
-		{
-
-		}
-
-
 		private void menuFormatAlignButton_Click(object sender, System.EventArgs e)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
@@ -3781,7 +3766,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			SetProperties(mc);
 		}
 
-		private void RdlDesigner_DragDrop(object sender, DragEventArgs e)
+		private async void RdlDesigner_DragDrop(object sender, DragEventArgs e)
 		{
 			try
 			{
@@ -3791,7 +3776,7 @@ namespace Majorsilence.Reporting.RdlDesign
 				{
 					if (s[i].ToLower().EndsWith(".rdl"))
 					{
-						CreateMDIChild(new Uri(s[i]), null, false);
+						await CreateMDIChildAsync(new Uri(s[i]), null, false);
 					}
 				}
 			}
@@ -3813,14 +3798,14 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
-		private void pDFToolStripMenuItem_Click(object sender, EventArgs e)
+		private async void pDFToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			PdfExport(false);
+			await PdfExportAsync(false);
 		}
 
-		private void pDFOldStyleToolStripMenuItem_Click(object sender, EventArgs e)
+		private async void pDFOldStyleToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			PdfExport(true);
+			await PdfExportAsync(true);
 		}
 
 		private void tIFFToolStripMenuItem_Click(object sender, EventArgs e)
@@ -3858,30 +3843,30 @@ namespace Majorsilence.Reporting.RdlDesign
 			exportToolStripMenuItemRtf_Click(sender, e);
 		}
 
-		private void dOCToolStripMenuItem_Click(object sender, EventArgs e)
+		private async void dOCToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
 			if (mc == null)
 				return;
 
-			mc.Export(Rdl.OutputPresentationType.Word);
+			await mc.ExportAsync(Rdl.OutputPresentationType.Word);
 			return;
 		}
 
-		private void Excel2007ToolStripMenuItem_Click(object sender, EventArgs e)
+		private async void Excel2007ToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			MDIChild mc = this.ActiveMdiChild as MDIChild;
 			if (mc == null)
 				return;
-
-			mc.Export(Rdl.OutputPresentationType.Excel2007);
-			return;
-		}
-
+            
+            await ShowSaveInProgressAsync(mc.Tab.Text,async () => {
+                await mc.ExportAsync(Rdl.OutputPresentationType.Excel2007);
+            });
+        }
+        
 		private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			menuFileExit_Click(sender, e);
-
 		}
 
 		private void ZoomControl1_ValueChanged(object sender, UserZoomControl.CambiaValori e)
@@ -3970,9 +3955,24 @@ namespace Majorsilence.Reporting.RdlDesign
 			mc.Editor.DesignCtl.VerticalCenterInsideContainer();
 			SetProperties(mc);
 		}
-
-
-
+        
+        private async Task ShowSaveInProgressAsync(string fileName,
+            Func<Task> operation)
+        {
+            toolStripStatusLabel2.Text = $"Saving {fileName}";
+            try
+            {
+                await operation();
+                toolStripStatusLabel2.Text = $"Saved {fileName}";
+            }
+            catch
+            {
+                toolStripStatusLabel2.Text = $"Failed to save {fileName}";
+            }
+            
+            await Task.Delay(4000);
+            toolStripStatusLabel2.Text = string.Empty;
+        }
 
 	}
 
@@ -4000,7 +4000,6 @@ namespace Majorsilence.Reporting.RdlDesign
 			_commands = value;
 		}
 
-        [Obsolete]
         public override object InitializeLifetimeService()
 		{
 			return null;

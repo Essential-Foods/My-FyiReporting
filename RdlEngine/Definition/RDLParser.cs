@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Collections;
 using System.IO;
@@ -44,6 +23,7 @@ namespace Majorsilence.Reporting.Rdl
 		string _Folder;			// folder that will contain report; needed when DataSourceReference used
 		string _overwriteConnectionString; // ConnectionString to be overwrite
 		bool _overwriteInSubreport ;// ConnectionString overwrite in subreport too
+		bool _skipDatabaseSchemaValidation; // Skip DB connection at parse time; use with SetData() workflows
 
         /// <summary>
         /// EBN 31/03/2014
@@ -136,7 +116,7 @@ namespace Majorsilence.Reporting.Rdl
 			
 			ReportLog rl = new ReportLog();		// create a report log
 
-			ReportDefn rd = new ReportDefn(xNode, rl, this._Folder, this._DataSourceReferencePassword, oc, OnSubReportGetContent, OverwriteConnectionString, OverwriteInSubreport);
+			ReportDefn rd = new ReportDefn(xNode, rl, this._Folder, this._DataSourceReferencePassword, oc, OnSubReportGetContent, OverwriteConnectionString, OverwriteInSubreport, SkipDatabaseSchemaValidation);
 			await rd.InitializeAsync();
 			_Report = new Report(rd);
 			
@@ -180,6 +160,19 @@ namespace Majorsilence.Reporting.Rdl
 		{
 			get { return _overwriteInSubreport; }
 			set { _overwriteInSubreport = value; }
+		}
+
+		/// <summary>
+		/// When true, skips opening a database connection during Parse() for schema validation.
+		/// Use this when you intend to supply all data via SetData() at runtime and have no
+		/// database available (or wish to avoid the round-trip) at parse time.
+		/// Field type information normally derived from the query schema will be unavailable,
+		/// so explicit &lt;rd:TypeName&gt; annotations on RDL Fields are recommended.
+		/// </summary>
+		public bool SkipDatabaseSchemaValidation
+		{
+			get { return _skipDatabaseSchemaValidation; }
+			set { _skipDatabaseSchemaValidation = value; }
 		}
 
 	}

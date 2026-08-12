@@ -1,33 +1,14 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using Majorsilence.Reporting.Rdl;
 using Majorsilence.Reporting.RdlDesign.Resources;
 using Majorsilence.Reporting.RdlDesign.Syntax;
 using Majorsilence.Reporting.RdlViewer;
 using ScintillaNET;
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Printing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 
@@ -169,7 +150,8 @@ namespace Majorsilence.Reporting.RdlDesign
 		{
 			get {return dcDesign.ReportDocument;}
 		}
-
+        
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		internal DesignTabs DesignTab
 		{
 			get {return _CurrentTab;}
@@ -205,6 +187,7 @@ namespace Majorsilence.Reporting.RdlDesign
             rdlPreview.ShowWaitDialog = bShow;
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         internal bool ShowReportItemOutline
         {
             get {return dcDesign.ShowReportItemOutline;}
@@ -278,6 +261,7 @@ namespace Majorsilence.Reporting.RdlDesign
 
 		private bool modified = false;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool Modified
 		{
 			get 
@@ -363,6 +347,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string SelectedText
 		{
 			get 
@@ -515,6 +500,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string CurrentInsert
 		{
 			get {return dcDesign.CurrentInsert; }
@@ -540,6 +526,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			}
 		}
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool SelectionTool
         {
             get
@@ -562,6 +549,7 @@ namespace Majorsilence.Reporting.RdlDesign
 		/// <summary>
 		/// Zoom 
 		/// </summary>
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public float Zoom
 		{
 			get {return this.rdlPreview.Zoom;}
@@ -571,6 +559,7 @@ namespace Majorsilence.Reporting.RdlDesign
 		/// <summary>
 		/// ZoomMode 
 		/// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public ZoomEnum ZoomMode
 		{
 			get {return this.rdlPreview.ZoomMode;}
@@ -712,7 +701,8 @@ namespace Majorsilence.Reporting.RdlDesign
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(RdlEditPreview));
-			this.tcEHP = new System.Windows.Forms.TabControl();
+            this.DoubleBuffered = true;
+            this.tcEHP = new System.Windows.Forms.TabControl();
 			this.tpDesign = new System.Windows.Forms.TabPage();
 			this.tpEditor = new System.Windows.Forms.TabPage();
 			this.scintilla1 = new ScintillaNET.Scintilla();
@@ -918,7 +908,7 @@ namespace Majorsilence.Reporting.RdlDesign
 			await this.rdlPreview.Print(pd);
 		}
 
-        public async void SaveAs(string filename, OutputPresentationType type)
+        public async Task SaveAs(string filename, OutputPresentationType type)
 		{
 			await this.rdlPreview.SaveAs(filename, type);
 		}

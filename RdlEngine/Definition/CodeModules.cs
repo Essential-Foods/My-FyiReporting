@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Collections;
@@ -64,16 +43,21 @@ namespace Majorsilence.Reporting.Rdl
                 _Items.TrimExcess();
 		}
 		/// <summary>
-		/// Return the Type given a class name.  Searches the CodeModules that are specified
-		/// in the report.
+		/// Return the Type given a class name.  Checks the AOT pre-registration first,
+		/// then searches the CodeModules that are specified in the report.
 		/// </summary>
 		internal Type this[string s]
 		{
-			get 
+			get
 			{
-				Type tp=null;
-                if (s == string.Empty)
-                    return null;
+				if (s == string.Empty)
+					return null;
+
+				// AOT path: check pre-registered types before attempting assembly scan
+				if (RdlEngineConfig.TryGetRegisteredType(s, out Type? registered))
+					return registered;
+
+				Type tp = null;
 				try
 				{
 					// loop thru all the codemodules looking for the assembly
@@ -83,13 +67,13 @@ namespace Majorsilence.Reporting.Rdl
 						Assembly a = cm.LoadedAssembly();
 						if (a != null)
 						{
-							tp = a.GetType(s,false,true);
+							tp = a.GetType(s, false, true);
 							if (tp != null)
 								break;
 						}
 					}
 				}
-				catch(Exception ex) 
+				catch (Exception ex)
 				{
 					OwnerReport.rl.LogError(4, string.Format("Exception finding type. {0}", ex.Message));
 				}

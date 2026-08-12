@@ -87,7 +87,7 @@ namespace ReportTests.Utils
                     await rap.DataSets[dataset.Key].SetData(dataset.Value);
                 }
             }
-            await rap.RunGetData(null);
+            await rap.RunGetData();
 
             string fileNameOut = string.Format("{0}_{1}_{2}{3}",
                                                 file2test,
@@ -98,6 +98,14 @@ namespace ReportTests.Utils
             string fullOutputPath = System.IO.Path.Combine(_outputFolder.LocalPath, fileNameOut);
             sg = new OneFileStreamGen(fullOutputPath, true);
             await rap.RunRender(sg, OutputPresentationType.RenderPdf_iTextSharp);
+
+            Assert.That(File.Exists(fullOutputPath), "PDF output file was not created");
+            var bytes =  File.ReadAllBytes(fullOutputPath);
+            Assert.That(bytes.Length, Is.GreaterThan(100), "PDF output is suspiciously small");
+            Assert.That(bytes[0], Is.EqualTo((byte)'%'), "PDF must start with '%'");
+            Assert.That(bytes[1], Is.EqualTo((byte)'P'), "PDF must start with '%P'");
+            Assert.That(bytes[2], Is.EqualTo((byte)'D'), "PDF must start with '%PD'");
+            Assert.That(bytes[3], Is.EqualTo((byte)'F'), "PDF must start with '%PDF'");
         }
 
     }

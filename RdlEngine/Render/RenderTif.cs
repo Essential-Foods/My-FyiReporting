@@ -4,7 +4,7 @@
    Copyright (C) 2011  Peter Gill <peter@majorsilence.com>  -- most of the drawing originally came from Viewer
 
    This file is part of the fyiReporting RDL project.
-	
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -21,35 +21,38 @@
    For additional information, email info@fyireporting.com or visit
    the website www.fyiReporting.com.
 */
-#if !DRAWINGCOMPAT
 using System;
 using Majorsilence.Reporting.Rdl;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
-using Draw2 = System.Drawing;
-using System.Drawing.Imaging;
-
-using System.Text;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
+#if DRAWINGCOMPAT
+using Draw2 = Majorsilence.Drawing;
+#else
+using Draw2 = System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
+#endif
 
 namespace Majorsilence.Reporting.Rdl
 {
 
-    ///<summary> 
-    /// Renders a report to TIF.   This is a page oriented formatting renderer. 
-    ///</summary> 
+    ///<summary>
+    /// Renders a report to TIF.   This is a page oriented formatting renderer.
+    ///</summary>
     internal class RenderTif : IPresent
     {
-        Report r;               // report 
-        Stream tw;               // where the output is going 
+        Report r;               // report
+        Stream tw;               // where the output is going
 
+#if !DRAWINGCOMPAT
         Draw2.Bitmap _tif;
+#endif
 
-        float DpiX;
-        float DpiY;
+        float DpiX = 200F;
+        float DpiY = 200F;
 
         bool _RenderColor;
 
@@ -60,7 +63,7 @@ namespace Majorsilence.Reporting.Rdl
             _RenderColor = true;
         }
 
-        public void Dispose() { } 
+        public void Dispose() { }
 
         /// <summary>
         /// Set RenderColor to false if you want to create a fax compatible tiff in black and white
@@ -90,11 +93,32 @@ namespace Majorsilence.Reporting.Rdl
             return Task.CompletedTask;
         }
 
-        public async Task RunPages(Pages pgs)   // this does all the work 
+        public async Task RunPages(Pages pgs)   // this does all the work
         {
             int pageNo = 1;
 
-            // STEP: processing a page. 
+#if DRAWINGCOMPAT
+            using var tiffWriter = new Majorsilence.Drawing.Imaging.TiffWriter(tw);
+            foreach (Page p in pgs)
+            {
+                Draw2.Bitmap bm = CreateObjectBitmap();
+                Draw2.Graphics g = bm.GetGraphics();
+                g.DpiX = DpiX;
+                g.DpiY = DpiY;
+                g.PageUnit = Draw2.GraphicsUnit.Pixel;
+                g.ScaleTransform(1, 1);
+
+                g.FillRectangle(Draw2.Brushes.White, 0F, 0F, (float)bm.Width, (float)bm.Height);
+
+                await ProcessPage(g, p);
+
+                tiffWriter.WritePage(bm.SkiaBitmap, _RenderColor, DpiX, DpiY);
+
+                pageNo++;
+            }
+            tiffWriter.Finish();
+#else
+            // STEP: processing a page.
             foreach (Page p in pgs)
             {
                 Draw2.Bitmap bm = CreateObjectBitmap();
@@ -106,13 +130,13 @@ namespace Majorsilence.Reporting.Rdl
                 DpiX = g.DpiX;
                 DpiY = g.DpiY;
 
-                // STEP: Fill backgroup 
+                // STEP: Fill backgroup
                 g.FillRectangle(Draw2.Brushes.White, 0F, 0F, (float)bm.Width, (float)bm.Height);
 
-                // STEP: draw page to bitmap 
+                // STEP: draw page to bitmap
                 await ProcessPage(g, p);
 
-                // STEP: 
+                // STEP:
                 Draw2.Bitmap bm2 = ConvertToBitonal(bm);
 
                 if (pageNo == 1)
@@ -125,15 +149,16 @@ namespace Majorsilence.Reporting.Rdl
 
             if (_tif != null)
             {
-                // STEP: prepare encoder parameters 
+                // STEP: prepare encoder parameters
                 Draw2.Imaging.EncoderParameters encoderParams = new Draw2.Imaging.EncoderParameters(1);
                 encoderParams.Param[0] = new Draw2.Imaging.EncoderParameter(
                     Draw2.Imaging.Encoder.SaveFlag, (long)Draw2.Imaging.EncoderValue.Flush
                 );
 
-                // STEP: 
+                // STEP:
                 _tif.SaveAdd(encoderParams);
             }
+#endif
 
             return;
         }
@@ -143,7 +168,7 @@ namespace Majorsilence.Reporting.Rdl
             foreach (PageItem pi in p)
             {
                 if (pi is PageTextHtml)
-                {   // PageTextHtml is actually a composite object (just like a page) 
+                {   // PageTextHtml is actually a composite object (just like a page)
                     await ProcessHtml(pi as PageTextHtml, g);
                     continue;
                 }
@@ -161,7 +186,7 @@ namespace Majorsilence.Reporting.Rdl
                 Draw2.RectangleF rect = new Draw2.RectangleF(PixelsX(pi.X), PixelsY(pi.Y), PixelsX(pi.W), PixelsY(pi.H));
 
                 if (pi.SI.BackgroundImage != null)
-                {   // put out any background image 
+                {   // put out any background image
                     PageImage i = pi.SI.BackgroundImage;
                     DrawImage(i, g, rect);
                 }
@@ -208,13 +233,13 @@ namespace Majorsilence.Reporting.Rdl
 
         private async Task ProcessHtml(PageTextHtml pth, Draw2.Graphics g)
         {
-            await pth.Build(g);            // Builds the subobjects that make up the html 
+            await pth.Build(g);            // Builds the subobjects that make up the html
             await this.ProcessPage(g, pth);
         }
 
         private void DrawLine(Draw2.Color c, BorderStyleEnum bs, float w, Draw2.Graphics g, float x, float y, float x2, float y2)
         {
-            if (bs == BorderStyleEnum.None || c.IsEmpty || w <= 0)   // nothing to draw 
+            if (bs == BorderStyleEnum.None || c.IsEmpty || w <= 0)   // nothing to draw
                 return;
 
             Draw2.Pen p = null;
@@ -390,7 +415,7 @@ namespace Majorsilence.Reporting.Rdl
             Draw2.Brush drawBrush = null;
             try
             {
-                // STYLE 
+                // STYLE
                 Draw2.FontStyle fs = 0;
                 if (si.FontStyle == FontStyleEnum.Italic)
                     fs |= Draw2.FontStyle.Italic;
@@ -408,7 +433,7 @@ namespace Majorsilence.Reporting.Rdl
                         break;
                 }
 
-                // WEIGHT 
+                // WEIGHT
                 switch (si.FontWeight)
                 {
                     case FontWeightEnum.Bold:
@@ -425,13 +450,13 @@ namespace Majorsilence.Reporting.Rdl
                 }
                 try
                 {
-                    drawFont = new Draw2.Font(si.GetFontFamily(), si.FontSize, fs);   // si.FontSize already in points 
+                    drawFont = new Draw2.Font(si.GetFontFamily(), si.FontSize, fs);   // si.FontSize already in points
                 }
                 catch (ArgumentException)
                 {
-                    drawFont = new Draw2.Font("Arial", si.FontSize, fs);   // if this fails we'll let the error pass thru 
+                    drawFont = new Draw2.Font("Arial", si.FontSize, fs);   // if this fails we'll let the error pass thru
                 }
-                // ALIGNMENT 
+                // ALIGNMENT
                 drawFormat = new Draw2.StringFormat();
                 switch (si.TextAlign)
                 {
@@ -464,25 +489,23 @@ namespace Majorsilence.Reporting.Rdl
                         drawFormat.LineAlignment = Draw2.StringAlignment.Near;
                         break;
                 }
-                // draw the background 
+                // draw the background
                 DrawBackground(g, r, si);
 
-                // adjust drawing rectangle based on padding 
+                // adjust drawing rectangle based on padding
                 Draw2.RectangleF r2 = new Draw2.RectangleF(r.Left + si.PaddingLeft,
                                                r.Top + si.PaddingTop,
                                                r.Width - si.PaddingLeft - si.PaddingRight,
                                                r.Height - si.PaddingTop - si.PaddingBottom);
 
                 drawBrush = new Draw2.SolidBrush(si.Color);
-                if (pt.NoClip)   // request not to clip text 
+                if (pt.NoClip)   // request not to clip text
                 {
                     g.DrawString(pt.Text, drawFont, drawBrush, new Draw2.PointF(r.Left, r.Top), drawFormat);
-                    //HighlightString(g, pt, new RectangleF(r.Left, r.Top, float.MaxValue, float.MaxValue),drawFont, drawFormat); 
                 }
                 else
                 {
                     g.DrawString(pt.Text, drawFont, drawBrush, r2, drawFormat);
-                    //HighlightString(g, pt, r2, drawFont, drawFormat); 
                 }
 
             }
@@ -519,23 +542,19 @@ namespace Majorsilence.Reporting.Rdl
 
         private void DrawImageSized(PageImage pi, Draw2.Image im, Draw2.Graphics g, Draw2.RectangleF r)
         {
-            float height, width;      // some work variables 
+            float height, width;      // some work variables
             StyleInfo si = pi.SI;
 
-            // adjust drawing rectangle based on padding 
+            // adjust drawing rectangle based on padding
             Draw2.RectangleF r2 = new Draw2.RectangleF(r.Left + PixelsX(si.PaddingLeft),
                 r.Top + PixelsY(si.PaddingTop),
                 r.Width - PixelsX(si.PaddingLeft + si.PaddingRight),
                 r.Height - PixelsY(si.PaddingTop + si.PaddingBottom));
 
-            Draw2.Rectangle ir;   // int work rectangle 
+            Draw2.Rectangle ir;   // int work rectangle
             switch (pi.Sizing)
             {
                 case ImageSizingEnum.AutoSize:
-                    // Note: GDI+ will stretch an image when you only provide 
-                    //  the left/top coordinates.  This seems pretty stupid since 
-                    //  it results in the image being out of focus even though 
-                    //  you don't want the image resized. 
                     if (g.DpiX == im.HorizontalResolution &&
                         g.DpiY == im.VerticalResolution)
                     {
@@ -546,9 +565,19 @@ namespace Majorsilence.Reporting.Rdl
                         ir = new Draw2.Rectangle(Convert.ToInt32(r2.Left), Convert.ToInt32(r2.Top),
                                            Convert.ToInt32(r2.Width), Convert.ToInt32(r2.Height));
                     g.DrawImage(im, ir);
-
                     break;
                 case ImageSizingEnum.Clip:
+#if DRAWINGCOMPAT
+                    var skCanvas = g.GetSkCanvas();
+                    int saveCount = skCanvas.Save();
+                    skCanvas.ClipRect(new SkiaSharp.SKRect(r2.X, r2.Y, r2.Right, r2.Bottom));
+                    if (g.DpiX == im.HorizontalResolution && g.DpiY == im.VerticalResolution)
+                        ir = new Draw2.Rectangle(Convert.ToInt32(r2.Left), Convert.ToInt32(r2.Top), im.Width, im.Height);
+                    else
+                        ir = new Draw2.Rectangle(Convert.ToInt32(r2.Left), Convert.ToInt32(r2.Top), Convert.ToInt32(r2.Width), Convert.ToInt32(r2.Height));
+                    g.DrawImage(im, ir);
+                    skCanvas.RestoreToCount(saveCount);
+#else
                     Draw2.Region saveRegion = g.Clip;
                     Draw2.Region clipRegion = new Draw2.Region(g.Clip.GetRegionData());
                     clipRegion.Intersect(r2);
@@ -564,6 +593,7 @@ namespace Majorsilence.Reporting.Rdl
                                            Convert.ToInt32(r2.Width), Convert.ToInt32(r2.Height));
                     g.DrawImage(im, ir);
                     g.Clip = saveRegion;
+#endif
                     break;
                 case ImageSizingEnum.FitProportional:
                     float ratioIm = (float)im.Height / (float)im.Width;
@@ -571,11 +601,11 @@ namespace Majorsilence.Reporting.Rdl
                     height = r2.Height;
                     width = r2.Width;
                     if (ratioIm > ratioR)
-                    {   // this means the rectangle width must be corrected 
+                    {   // this means the rectangle width must be corrected
                         width = height * (1 / ratioIm);
                     }
                     else if (ratioIm < ratioR)
-                    {   // this means the ractangle height must be corrected 
+                    {   // this means the ractangle height must be corrected
                         height = width * ratioIm;
                     }
                     r2 = new Draw2.RectangleF(r2.X, r2.Y, width, height);
@@ -654,7 +684,7 @@ namespace Majorsilence.Reporting.Rdl
 
         private void DrawBorder(PageItem pi, Draw2.Graphics g, Draw2.RectangleF r)
         {
-            if (r.Height <= 0 || r.Width <= 0)      // no bounding box to use 
+            if (r.Height <= 0 || r.Width <= 0)      // no bounding box to use
                 return;
 
             StyleInfo si = pi.SI;
@@ -674,6 +704,12 @@ namespace Majorsilence.Reporting.Rdl
         #region TIFF image handler
         private Draw2.Bitmap CreateObjectBitmap()
         {
+#if DRAWINGCOMPAT
+            return new Draw2.Bitmap(
+                Convert.ToInt32(r.ReportDefinition.PageWidth.Size / 2540F * DpiX),
+                Convert.ToInt32(r.ReportDefinition.PageHeight.Size / 2540F * DpiY)
+            );
+#else
             float dpiX = 200F;
             float dpiY = 200F;
 
@@ -686,8 +722,10 @@ namespace Majorsilence.Reporting.Rdl
             bm.SetResolution(dpiX, dpiY);
 
             return bm;
+#endif
         }
 
+#if !DRAWINGCOMPAT
         private Draw2.Bitmap ConvertToBitonal(Draw2.Bitmap original)
         {
             if (_RenderColor)
@@ -695,7 +733,7 @@ namespace Majorsilence.Reporting.Rdl
 
             Draw2.Bitmap source = null;
 
-            // If original bitmap is not already in 32 BPP, ARGB format, then convert 
+            // If original bitmap is not already in 32 BPP, ARGB format, then convert
             if (original.PixelFormat != Draw2.Imaging.PixelFormat.Format32bppArgb)
             {
                 source = new Draw2.Bitmap(original.Width, original.Height, Draw2.Imaging.PixelFormat.Format32bppArgb);
@@ -710,30 +748,30 @@ namespace Majorsilence.Reporting.Rdl
                 source = original;
             }
 
-            // Lock source bitmap in memory 
-            Draw2.Imaging.BitmapData sourceData = source.LockBits(new Draw2.Rectangle(0, 0, source.Width, source.Height), 
+            // Lock source bitmap in memory
+            Draw2.Imaging.BitmapData sourceData = source.LockBits(new Draw2.Rectangle(0, 0, source.Width, source.Height),
                 Draw2.Imaging.ImageLockMode.ReadOnly,
                 Draw2.Imaging.PixelFormat.Format32bppArgb);
 
-            // Copy image data to binary array 
+            // Copy image data to binary array
             int imageSize = sourceData.Stride * sourceData.Height;
             byte[] sourceBuffer = new byte[imageSize];
             Marshal.Copy(sourceData.Scan0, sourceBuffer, 0, imageSize);
 
-            // Unlock source bitmap 
+            // Unlock source bitmap
             source.UnlockBits(sourceData);
 
-            // Create destination bitmap 
+            // Create destination bitmap
             Draw2.Bitmap destination = new Draw2.Bitmap(source.Width, source.Height, Draw2.Imaging.PixelFormat.Format1bppIndexed);
 
-            // Set resolution 
+            // Set resolution
             destination.SetResolution(source.HorizontalResolution, source.VerticalResolution);
 
-            // Lock destination bitmap in memory 
-            Draw2.Imaging.BitmapData destinationData = destination.LockBits(new Draw2.Rectangle(0, 0, destination.Width, destination.Height), 
+            // Lock destination bitmap in memory
+            Draw2.Imaging.BitmapData destinationData = destination.LockBits(new Draw2.Rectangle(0, 0, destination.Width, destination.Height),
                 Draw2.Imaging.ImageLockMode.WriteOnly, Draw2.Imaging.PixelFormat.Format1bppIndexed);
 
-            // Create destination buffer 
+            // Create destination buffer
             imageSize = destinationData.Stride * destinationData.Height;
             byte[] destinationBuffer = new byte[imageSize];
 
@@ -746,7 +784,7 @@ namespace Majorsilence.Reporting.Rdl
             int width = source.Width;
             int threshold = 500;
 
-            // Iterate lines 
+            // Iterate lines
             for (int y = 0; y < height; y++)
             {
                 sourceIndex = y * sourceData.Stride;
@@ -754,10 +792,10 @@ namespace Majorsilence.Reporting.Rdl
                 destinationValue = 0;
                 pixelValue = 128;
 
-                // Iterate pixels 
+                // Iterate pixels
                 for (int x = 0; x < width; x++)
                 {
-                    // Compute pixel brightness (i.e. total of Red, Green, and Blue values) 
+                    // Compute pixel brightness (i.e. total of Red, Green, and Blue values)
                     pixelTotal = sourceBuffer[sourceIndex + 1] + sourceBuffer[sourceIndex + 2] + sourceBuffer[sourceIndex + 3];
                     if (pixelTotal > threshold)
                     {
@@ -782,13 +820,13 @@ namespace Majorsilence.Reporting.Rdl
                 }
             }
 
-            // Copy binary image data to destination bitmap 
+            // Copy binary image data to destination bitmap
             Marshal.Copy(destinationBuffer, 0, destinationData.Scan0, imageSize);
 
-            // Unlock destination bitmap 
+            // Unlock destination bitmap
             destination.UnlockBits(destinationData);
 
-            // Return 
+            // Return
             return destination;
         }
 
@@ -796,9 +834,9 @@ namespace Majorsilence.Reporting.Rdl
         {
             if (pageNo == 1)
             {
-                // Handling saving first page 
+                // Handling saving first page
 
-                // STEP: Prepare ImageCodecInfo for saving 
+                // STEP: Prepare ImageCodecInfo for saving
                 ImageCodecInfo info = null;
 
                 foreach (ImageCodecInfo i in ImageCodecInfo.GetImageEncoders())
@@ -810,7 +848,7 @@ namespace Majorsilence.Reporting.Rdl
                     }
                 }
 
-                // STEP: Prepare parameters 
+                // STEP: Prepare parameters
                 Draw2.Imaging.EncoderParameters encoderParams = new Draw2.Imaging.EncoderParameters(2);
 
                 encoderParams.Param[0] = new Draw2.Imaging.EncoderParameter(
@@ -818,26 +856,27 @@ namespace Majorsilence.Reporting.Rdl
                 );
 
                 encoderParams.Param[1] = new Draw2.Imaging.EncoderParameter(
-                    Draw2.Imaging.Encoder.Compression, 
-                    (long)(_RenderColor? Draw2.Imaging.EncoderValue.CompressionLZW: Draw2.Imaging.EncoderValue.CompressionCCITT3)
+                    Draw2.Imaging.Encoder.Compression,
+                    (long)(_RenderColor ? Draw2.Imaging.EncoderValue.CompressionLZW : Draw2.Imaging.EncoderValue.CompressionCCITT3)
                 );
 
-                // STEP: Save bitmap 
+                // STEP: Save bitmap
                 tif.Save(st, info, encoderParams);
             }
             else
             {
-                // STEP: Prepare parameters 
+                // STEP: Prepare parameters
                 Draw2.Imaging.EncoderParameters encoderParams = new Draw2.Imaging.EncoderParameters(1);
 
                 encoderParams.Param[0] = new Draw2.Imaging.EncoderParameter(
                     Draw2.Imaging.Encoder.SaveFlag, (long)Draw2.Imaging.EncoderValue.FrameDimensionPage
                 );
 
-                // STEP: Save bitmap 
+                // STEP: Save bitmap
                 tif.SaveAdd(bm, encoderParams);
             }
         }
+#endif
         #endregion
 
         internal float PixelsX(float x)
@@ -850,7 +889,7 @@ namespace Majorsilence.Reporting.Rdl
             return (y * DpiY / 72.0f);
         }
 
-        // Body: main container for the report 
+        // Body: main container for the report
         public void BodyStart(Body b)
         {
         }
@@ -885,7 +924,7 @@ namespace Majorsilence.Reporting.Rdl
             return Task.CompletedTask;
         }
 
-        // Lists 
+        // Lists
         public Task<bool> ListStart(List l, Row r)
         {
             return Task.FromResult(true);
@@ -905,7 +944,7 @@ namespace Majorsilence.Reporting.Rdl
         {
         }
 
-        // Tables               // Report item table 
+        // Tables               // Report item table
         public Task<bool> TableStart(Table t, Row row)
         {
             return Task.FromResult(true);
@@ -959,12 +998,12 @@ namespace Majorsilence.Reporting.Rdl
             return;
         }
 
-        public Task<bool> MatrixStart(Matrix m, MatrixCellEntry[,] matrix, Row r, int headerRows, int maxRows, int maxCols)            // called first 
+        public Task<bool> MatrixStart(Matrix m, MatrixCellEntry[,] matrix, Row r, int headerRows, int maxRows, int maxCols)            // called first
         {
             return Task.FromResult(true);
         }
 
-        public void MatrixColumns(Matrix m, MatrixColumns mc)   // called just after MatrixStart 
+        public void MatrixColumns(Matrix m, MatrixColumns mc)   // called just after MatrixStart
         {
         }
 
@@ -986,7 +1025,7 @@ namespace Majorsilence.Reporting.Rdl
         {
         }
 
-        public Task MatrixEnd(Matrix m, Row r)            // called last 
+        public Task MatrixEnd(Matrix m, Row r)            // called last
         {
             return Task.CompletedTask;
         }
@@ -1021,19 +1060,17 @@ namespace Majorsilence.Reporting.Rdl
             return Task.CompletedTask;
         }
 
-        public void GroupingStart(Grouping g)         // called at start of grouping 
+        public void GroupingStart(Grouping g)         // called at start of grouping
         {
         }
-        public void GroupingInstanceStart(Grouping g)   // called at start for each grouping instance 
+        public void GroupingInstanceStart(Grouping g)   // called at start for each grouping instance
         {
         }
-        public void GroupingInstanceEnd(Grouping g)   // called at start for each grouping instance 
+        public void GroupingInstanceEnd(Grouping g)   // called at start for each grouping instance
         {
         }
-        public void GroupingEnd(Grouping g)         // called at end of grouping 
+        public void GroupingEnd(Grouping g)         // called at end of grouping
         {
         }
     }
 }
-
-#endif

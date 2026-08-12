@@ -1,31 +1,9 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -97,7 +75,7 @@ namespace Majorsilence.Reporting.Rdl
 				if (temp != null)
 				{
 					if (sum != null)
-						sum = temp.GetType().GetMethod("op_Addition").Invoke(null, new []{ sum, temp});
+						sum = AddObjects(sum, temp);
 					else
 						sum = temp;
 				}
@@ -215,5 +193,24 @@ namespace Majorsilence.Reporting.Rdl
 		}
 
 		#endregion
+
+		private static object AddObjects(object a, object b)
+		{
+			return Type.GetTypeCode(a.GetType()) switch
+			{
+				TypeCode.Int32   => (int)a    + (int)b,
+				TypeCode.Int64   => (long)a   + (long)b,
+				TypeCode.Double  => (double)a + (double)b,
+				TypeCode.Decimal => (decimal)a + (decimal)b,
+				TypeCode.Single  => (float)a  + (float)b,
+				TypeCode.Int16   => (short)a  + (short)b,
+				TypeCode.UInt32  => (uint)a   + (uint)b,
+				TypeCode.UInt64  => (ulong)a  + (ulong)b,
+				TypeCode.UInt16  => (ushort)a + (ushort)b,
+				TypeCode.Byte    => (byte)a   + (byte)b,
+				TypeCode.SByte   => (sbyte)a  + (sbyte)b,
+				_ => Convert.ToDouble(a) + Convert.ToDouble(b),
+			};
+		}
 	}
 }

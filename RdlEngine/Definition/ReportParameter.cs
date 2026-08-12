@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Xml;
@@ -235,7 +214,7 @@ namespace Majorsilence.Reporting.Rdl
 
 			object rtv;
             if (v is Guid)
-            { //Added from Forum, User: solidstore http://www.fyireporting.com/forum/viewtopic.php?t=905
+            {
                 v = ((Guid)v).ToString("B"); 
             }
 			if (!AllowBlank && _dt == TypeCode.String && (string) v == "")
@@ -516,10 +495,16 @@ namespace Majorsilence.Reporting.Rdl
 
 		/// <summary>
 		/// The runtime value of the parameter.
+		/// Prefer using GetValueAsync() to avoid synchronous blocking on an async call.
 		/// </summary>
 		public object Value
 		{
-			get { return _rp.GetRuntimeValue(this._rpt); }
+            get
+            {
+                // HACK: async - synchronous wrapper needed for property getter;
+                // use GetValueAsync() when an async context is available.
+                return Task.Run(async () => await _rp.GetRuntimeValue(this._rpt)).GetAwaiter().GetResult();
+            }
 			set 
 			{
                 if (this.MultiValue && value is string)
@@ -533,6 +518,15 @@ namespace Majorsilence.Reporting.Rdl
                 _rp.SetRuntimeValue(_rpt, dvalue); 
 			}
 		}
+
+        /// <summary>
+        /// Asynchronously gets the runtime value of the parameter.
+        /// Prefer this over the synchronous Value getter when an async context is available.
+        /// </summary>
+        public async Task<object> GetValueAsync()
+        {
+            return await _rp.GetRuntimeValue(this._rpt);
+        }
 
         /// <summary>
         /// Take a string and parse it into multiple values

@@ -1,25 +1,3 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-    
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -111,6 +89,7 @@ namespace Majorsilence.Reporting.RdlDesign
         private void InitializeComponent()
         {
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CodeCtl));
+            this.DoubleBuffered = true;
 			this.label1 = new System.Windows.Forms.Label();
 			this.bCheckSyntax = new System.Windows.Forms.Button();
 			this.panel1 = new System.Windows.Forms.Panel();
@@ -206,7 +185,7 @@ namespace Majorsilence.Reporting.RdlDesign
             //Imports Microsoft.VisualBasic
             //Imports System.Convert
             //Imports System.Math 
-            //Namespace fyiReporting.vbgen
+            //Namespace Majorsilence.Reporting.vbgen
             //Public Class MyClassn	   // where n is a uniquely generated integer
             //Sub New()
             //End Sub
@@ -219,7 +198,7 @@ namespace Majorsilence.Reporting.RdlDesign
             lines.Add("Imports System.Convert");
             lines.Add("Imports System.Math");
             lines.Add("Imports Majorsilence.Reporting.Rdl");
-            lines.Add("Namespace fyiReporting.vbgen");
+            lines.Add("Namespace Majorsilence.Reporting.vbgen");
             string classname = "MyClass" + unique;
             lines.Add("Public Class " + classname);
             lines.Add("Private Shared _report As CodeReport");
@@ -255,7 +234,7 @@ namespace Majorsilence.Reporting.RdlDesign
             // Create Assembly
             CompilerParameters cp = new CompilerParameters();
             cp.ReferencedAssemblies.Add("System.dll");
-            string re = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RdlEngine.dll");  // Issue #35
+            string re = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Majorsilence.Reporting.RdlEngine.dll");  // Issue #35
             cp.ReferencedAssemblies.Add(re);
 
             // also allow access to classes that have been added to report

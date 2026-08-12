@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Drawing;
 using System.Collections;
@@ -52,19 +31,15 @@ namespace Majorsilence.Reporting.RdlReader
         Dictionary<Uri, String> _CurrentFiles = null;			// temporary variable for current files
         private Rdl.NeedPassword _GetPassword;
         private string _DataSourceReferencePassword = null;
-        private bool bMono;
 
-        public RdlReader(bool mono)
+        public RdlReader()
         {
-            this.DoubleBuffered = true;
-
-            bMono = mono;
             GetStartupState();
 
             InitializeComponent();
 
             BuildMenus();
-            // CustomReportItem load 
+            // CustomReportItem load
             RdlEngineConfig.GetCustomReportTypes();
 
             Application.AddMessageFilter(this);
@@ -73,6 +48,11 @@ namespace Majorsilence.Reporting.RdlReader
             _GetPassword = new Rdl.NeedPassword(this.GetPassword);
 
             this.Load += RdlReader_Load;
+        }
+
+        [Obsolete("This constructor was only for Mono compatibility, use RdlReader() instead.")]
+        public RdlReader(bool mono) : this()
+        {
         }
 
         public async void RdlReader_Load(object sender, EventArgs e) 
@@ -113,9 +93,6 @@ namespace Majorsilence.Reporting.RdlReader
         /// <returns></returns>
         public bool PreFilterMessage(ref Message m)
         {
-#if MONO
-            return false;
-#else
             if (m.Msg == 0x20a)
             {
                 // WM_MOUSEWHEEL, find the control at screen position m.LParam
@@ -128,16 +105,13 @@ namespace Majorsilence.Reporting.RdlReader
                 }
             }
             return false;
-#endif
         }
-#if MONO
-#else
+
         // P/Invoke declarations
         [DllImport("user32.dll")]
         private static extern IntPtr WindowFromPoint(Point pt);
         [DllImport("user32.dll")]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wp, IntPtr lp);
-#endif
 
         /// <summary>
         /// Clean up any resources being used.
@@ -178,7 +152,6 @@ namespace Majorsilence.Reporting.RdlReader
         [STAThread]
         static void Main()
         {
-            bool bMono = false;
             string[] args = Environment.GetCommandLineArgs();
 
             string reportFile = string.Empty;
@@ -188,12 +161,7 @@ namespace Majorsilence.Reporting.RdlReader
             for (int i = 0; i < args.Length; i++)
             {
                 string argValue = args[i];
-                if (argValue.ToLower() == "/m" || argValue.ToLower() == "-m")
-                {
-                    // user want to run with mono simplifications
-                    bMono = true;
-                }
-                else if (argValue == "-r")
+                if (argValue == "-r")
                 {
                     reportFile = args[i + 1];
                     if (System.IO.Path.GetDirectoryName(reportFile) == string.Empty)
@@ -257,14 +225,11 @@ namespace Majorsilence.Reporting.RdlReader
                     MessageBox.Show(string.Format(Strings.RdlReader_ShowD_ReportNotLoaded, reportFile), Strings.RdlReader_Show_MyFyiReporting, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-
-            if (bMono == false)
-            {
-                Application.EnableVisualStyles();
-                Application.DoEvents();				// when Mono this goes into a loop
-            }
-
-            Application.Run(new RdlReader(bMono));
+            
+            Application.EnableVisualStyles();
+            Application.DoEvents();
+            
+            Application.Run(new RdlReader());
         }
 
         public static async Task SilentPrint(string reportPath, string parameters, string printerName = null)

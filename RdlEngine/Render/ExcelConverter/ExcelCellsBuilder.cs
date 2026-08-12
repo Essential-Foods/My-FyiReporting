@@ -43,9 +43,9 @@ namespace RdlEngine.Render.ExcelConverter
 			Lines = new List<ExcelLine>();
 		}
 
-		public void AddImage(Majorsilence.Reporting.Rdl.Image image, int pictureIndex)
+		public void AddImage(Majorsilence.Reporting.Rdl.Image image, byte[] data)
 		{
-			var img = new ExcelImage(image, pictureIndex);
+			var img = new ExcelImage(image, data);
 			float top = image.Top.Points;
 			float left = image.Left.Points;
 			FillAbsolutePosition(image, ref top, ref left);
@@ -110,7 +110,7 @@ namespace RdlEngine.Render.ExcelConverter
 			if(CurrentExcelTable.Table == null) {
 				return;
 			}
-			float rowHeight = tr.CanGrow ? await tr.HeightOfRow(Report, g, row) : tr.Height.Points;
+			float rowHeight = (tr.CanGrow || tr.CanShrink) ? await tr.HeightOfRow(Report, g, row) : tr.Height.Points;
 
 			var shiftingRows = Rows.Where(x => x.YPosition >= rowPosition);
 			ShiftBottomRows(shiftingRows, rowHeight);
@@ -161,8 +161,8 @@ namespace RdlEngine.Render.ExcelConverter
 					break;
 				}
 				if((rl is DataRegion || rl is Majorsilence.Reporting.Rdl.Rectangle) && !(rl is CustomReportItem)) {
-					top += (rl as ReportItem).Top.Points;
-					left += (rl as ReportItem).Left.Points;
+					top += (rl as ReportItem)?.Top?.Points ?? 0;
+					left += (rl as ReportItem)?.Left?.Points ?? 0;
 				}
 			}
 		}

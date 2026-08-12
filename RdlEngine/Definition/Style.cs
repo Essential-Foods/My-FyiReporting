@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Xml;
@@ -158,90 +137,90 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "BorderColor":
+					case "bordercolor":
 						_BorderColor = new StyleBorderColor(r, this, xNodeLoop);
 						break;
-					case "BorderStyle":
+					case "borderstyle":
 						_BorderStyle = new StyleBorderStyle(r, this, xNodeLoop);
 						break;
-					case "BorderWidth":
+					case "borderwidth":
 						_BorderWidth = new StyleBorderWidth(r, this, xNodeLoop);
 						break;
-					case "BackgroundColor":
+					case "backgroundcolor":
 						_BackgroundColor = new Expression(r, this, xNodeLoop, ExpressionType.Color);
 						break;
-					case "BackgroundGradientType": 
+					case "backgroundgradienttype": 
 						_BackgroundGradientType = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "BackgroundGradientEndColor":
+					case "backgroundgradientendcolor":
 						_BackgroundGradientEndColor = new Expression(r, this, xNodeLoop, ExpressionType.Color);
 						break;
-					case "BackgroundImage":
+					case "backgroundimage":
 						_BackgroundImage = new StyleBackgroundImage(r, this, xNodeLoop);
 						break;
-					case "FontStyle":
+					case "fontstyle":
 						_FontStyle = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "FontFamily":
+					case "fontfamily":
 						_FontFamily = new Expression(r, this, xNodeLoop, ExpressionType.String);
 						break;
-					case "FontSize":
+					case "fontsize":
 						_FontSize = new Expression(r, this, xNodeLoop, ExpressionType.ReportUnit);
 						break;
-					case "FontWeight":
+					case "fontweight":
 						_FontWeight = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "Format":
+					case "format":
 						_Format =  new Expression(r, this, xNodeLoop, ExpressionType.String);
 						break;
-					case "TextDecoration":
+					case "textdecoration":
 						_TextDecoration = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "TextAlign":
+					case "textalign":
 						_TextAlign = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "VerticalAlign":
+					case "verticalalign":
 						_VerticalAlign = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "Color":
+					case "color":
 						_Color =  new Expression(r, this, xNodeLoop, ExpressionType.Color);
 						break;
-					case "PaddingLeft":
+					case "paddingleft":
 						_PaddingLeft = new Expression(r, this, xNodeLoop, ExpressionType.ReportUnit);
 						break;
-					case "PaddingRight":
+					case "paddingright":
 						_PaddingRight = new Expression(r, this, xNodeLoop, ExpressionType.ReportUnit);
 						break;
-					case "PaddingTop":
+					case "paddingtop":
 						_PaddingTop =  new Expression(r, this, xNodeLoop, ExpressionType.ReportUnit);
 						break;
-					case "PaddingBottom":
+					case "paddingbottom":
 						_PaddingBottom = new Expression(r, this, xNodeLoop, ExpressionType.ReportUnit);
 						break;
-					case "LineHeight":
+					case "lineheight":
 						_LineHeight = new Expression(r, this, xNodeLoop, ExpressionType.ReportUnit);
 						break;
-					case "Direction":
+					case "direction":
 						_Direction = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "WritingMode":
+					case "writingmode":
 						_WritingMode = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "Language":
+					case "language":
 						_Language = new Expression(r, this, xNodeLoop, ExpressionType.Language);
 						break;
-					case "UnicodeBiDirectional":
+					case "unicodebidirectional":
 						_UnicodeBiDirectional = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "Calendar":
+					case "calendar":
 						_Calendar = new Expression(r, this, xNodeLoop, ExpressionType.Enum);
 						break;
-					case "NumeralLanguage":
+					case "numerallanguage":
 						_NumeralLanguage = new Expression(r, this, xNodeLoop, ExpressionType.Language);
 						break;
-					case "NumeralVariant":
+					case "numeralvariant":
 						_NumeralVariant = new Expression(r, this, xNodeLoop, ExpressionType.Integer);
 						break;
 					default:	
@@ -910,9 +889,20 @@ namespace Majorsilence.Reporting.Rdl
 				sb.Append("font-style:normal;");
 
 			if (_FontFamily != null)
-				sb.AppendFormat(NumberFormatInfo.InvariantInfo, "font-family:{0};",await _FontFamily.EvaluateString(rpt, row));
+			{
+				var _ff = await _FontFamily.EvaluateString(rpt, row);
+#if DRAWINGCOMPAT
+				sb.AppendFormat(NumberFormatInfo.InvariantInfo, "font-family:{0};", Draw2.FontResourceLoader.GetCssFontStack(_ff));
+#else
+				sb.AppendFormat(NumberFormatInfo.InvariantInfo, "font-family:{0};", _ff);
+#endif
+			}
 			else if (bDefaults)
+#if DRAWINGCOMPAT
+				sb.Append("font-family:" + Draw2.FontResourceLoader.GetCssFontStack("Arial") + ";");
+#else
 				sb.Append("font-family:Arial;");
+#endif
 
 			if (_FontSize != null)
 				sb.AppendFormat(NumberFormatInfo.InvariantInfo, "font-size:{0};", await _FontSize.EvaluateString(rpt, row));
@@ -1080,58 +1070,17 @@ namespace Majorsilence.Reporting.Rdl
 				return "";
 
 			string format = null;
-			try 
+			try
 			{
                 if (s != null && s.Format != null)
                 {
                     format = await s.Format.EvaluateString(rpt, row);
                     if (format != null && format.Length > 0)
                     {
-                        switch (tc)
-                        {
-                            case TypeCode.DateTime:
-                                t = ((DateTime)o).ToString(format);
-                                break;
-                            case TypeCode.Int16:
-                                t = ((short)o).ToString(format);
-                                break;
-                            case TypeCode.UInt16:
-                                t = ((ushort)o).ToString(format);
-                                break;
-                            case TypeCode.Int32:
-                                t = ((int)o).ToString(format);
-                                break;
-                            case TypeCode.UInt32:
-                                t = ((uint)o).ToString(format);
-                                break;
-                            case TypeCode.Int64:
-                                t = ((long)o).ToString(format);
-                                break;
-                            case TypeCode.UInt64:
-                                t = ((ulong)o).ToString(format);
-                                break;
-                            case TypeCode.String:
-                                t = (string)o;
-                                break;
-                            case TypeCode.Decimal:
-                                t = ((decimal)o).ToString(format);
-                                break;
-                            case TypeCode.Single:
-                                t = ((float)o).ToString(format);
-                                break;
-                            case TypeCode.Double:
-                                t = ((double)o).ToString(format);
-                                break;
-                            default:
-								var formatedMethod = o.GetType().GetMethod("ToString", new Type[] { typeof(string) });
-								if (formatedMethod != null)
-									t = (string)formatedMethod.Invoke(o, new object[] { format });
-								else
-									t = o.ToString();
-                                break;
-                        }
+                        string language = await s.EvalLanguage(rpt, row);
+                        t = FormatValue(o, tc, format, language);
                     }
-                    else    
+                    else
                         t = o.ToString();       // No format provided
                 }
                 else
@@ -1146,6 +1095,51 @@ namespace Majorsilence.Reporting.Rdl
 				t = o.ToString();       // probably type mismatch from expectation
 			}
 			return t;
+		}
+
+		// Apply a format string to a value using the given BCP 47 language tag for locale-sensitive
+		// formats (C, N, P, etc.). Falls back to CurrentCulture if the tag is absent or unrecognised.
+		static internal string FormatValue(object o, TypeCode tc, string format, string language)
+		{
+			if (string.IsNullOrEmpty(format))
+				return o.ToString();
+
+			CultureInfo ci = CultureInfo.CurrentCulture;
+			if (!string.IsNullOrEmpty(language))
+			{
+				try { ci = CultureInfo.GetCultureInfo(language); }
+				catch (CultureNotFoundException) { }
+			}
+
+			switch (tc)
+			{
+				case TypeCode.DateTime:
+					return ((DateTime)o).ToString(format, ci);
+				case TypeCode.Int16:
+					return ((short)o).ToString(format, ci);
+				case TypeCode.UInt16:
+					return ((ushort)o).ToString(format, ci);
+				case TypeCode.Int32:
+					return ((int)o).ToString(format, ci);
+				case TypeCode.UInt32:
+					return ((uint)o).ToString(format, ci);
+				case TypeCode.Int64:
+					return ((long)o).ToString(format, ci);
+				case TypeCode.UInt64:
+					return ((ulong)o).ToString(format, ci);
+				case TypeCode.String:
+					return (string)o;
+				case TypeCode.Decimal:
+					return ((decimal)o).ToString(format, ci);
+				case TypeCode.Single:
+					return ((float)o).ToString(format, ci);
+				case TypeCode.Double:
+					return ((double)o).ToString(format, ci);
+				default:
+					return (o is IFormattable fmt)
+						? fmt.ToString(format, ci)
+						: o.ToString();
+			}
 		}
 
 		private async Task<bool> IsConstant()

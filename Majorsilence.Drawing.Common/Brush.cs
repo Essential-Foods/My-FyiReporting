@@ -1,12 +1,11 @@
-﻿using SkiaSharp;
+using SkiaSharp;
 
 
 namespace Majorsilence.Drawing
 {
-    // Compatibility wrapper for Brush (only supports solid color for now)
     public class Brush : IDisposable
     {
-        private SKPaint _paint;
+        protected SKPaint _paint;
 
         public Brush(Color color)
         {
@@ -17,16 +16,15 @@ namespace Majorsilence.Drawing
             };
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             _paint?.Dispose();
+            _paint = null;
         }
 
-        // Convert Brush to SKPaint
-        internal SKPaint ToSkPaint()
+        internal virtual SKPaint ToSkPaint()
         {
             return _paint;
         }
     }
-
 }

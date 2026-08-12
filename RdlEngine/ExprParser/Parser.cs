@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -474,9 +453,9 @@ namespace Majorsilence.Reporting.Rdl
                 thirdPart = null;
             }
 
-			if (curToken.Type != TokenTypes.LPAREN) switch (firstPart)
+			if (curToken.Type != TokenTypes.LPAREN) switch (firstPart.ToLowerInvariant())
 			{
-				case "Fields":
+				case "fields":
 					Field f = null;
 
 					if (inAggregateDataSet != null)
@@ -505,7 +484,7 @@ namespace Majorsilence.Reporting.Rdl
 					else
 						throw new ParserException(string.Format(Strings.Parser_ErrorP_FieldSupportsValueAndIsMissing, method));
 					return (true, result);
-                case "Parameters":  // see ResolveParametersMethod for resolution of MultiValue parameter function reference
+                case "parameters":  // see ResolveParametersMethod for resolution of MultiValue parameter function reference
 					ReportParameter p = idLookup.LookupParameter(method);
 					if (p == null)
 						throw new ParserException(string.Format(Strings.Parser_ErrorP_ParameterNotFound, method));
@@ -524,7 +503,7 @@ namespace Majorsilence.Reporting.Rdl
                     
                     result = r;
                     return (true, result);
-				case "ReportItems":
+				case "reportitems":
 					Textbox t = idLookup.LookupReportItem(method);
 					if (t == null)
 						throw new ParserException(string.Format(Strings.Parser_ErrorP_ItemNotFound, method));
@@ -532,22 +511,22 @@ namespace Majorsilence.Reporting.Rdl
 						throw new ParserException(string.Format(Strings.Parser_ErrorP_ItemSupportsValue, method));
 					result = new FunctionTextbox(t, idLookup.ExpressionName);	
 					return (true, result);
-				case "Globals":
+				case "globals":
 					e = idLookup.LookupGlobal(method);
 					if (e == null)
 						throw new ParserException(string.Format(Strings.Parser_ErrorP_GlobalsNotFound, method));
 					result = e;
 					return (true, result);
-				case "User":
+				case "user":
 					e = idLookup.LookupUser(method);
 					if (e == null)
 						throw new ParserException(string.Format(Strings.Parser_ErrorP_UserVarNotFound, method));
 					result = e;
 					return (true, result);
-				case "Recursive":	// Only valid for some aggregate functions
+				case "recursive":	// Only valid for some aggregate functions
 					result = new IdentifierKey(IdentifierKeyEnum.Recursive);
 					return (true, result);
-				case "Simple":		// Only valid for some aggregate functions
+				case "simple":		// Only valid for some aggregate functions
 					result = new IdentifierKey(IdentifierKeyEnum.Simple);
 					return (true, result);
 				default:
@@ -585,6 +564,13 @@ namespace Majorsilence.Reporting.Rdl
 				int level = 0;
 				bool nextScope = false;
 				Token scopeToken = null;
+				// RunningValue's signature is RunningValue(expression, aggregateFunction, scope),
+				// so its scope is the third argument (after the second top-level comma) rather
+				// than the second argument used by the other aggregate functions. The scope of
+				// a RunningValue is also typically a grouping name, not a DataSet name.
+				bool isRunningValue = method.ToLower() == "runningvalue";
+				int commasBeforeScope = isRunningValue ? 2 : 1;
+				int commaCount = 0;
 				foreach(Token tok in tokens)
 				{
 					if(nextScope)
@@ -592,9 +578,12 @@ namespace Majorsilence.Reporting.Rdl
 						scopeToken = tok;
 						break;
 					}
-					
+
 					if(level == 0 && tok.Type == TokenTypes.COMMA)
 					{
+						commaCount++;
+						if (commaCount < commasBeforeScope)
+							continue;
 						nextScope = true;
 						continue;
 					}
@@ -606,11 +595,20 @@ namespace Majorsilence.Reporting.Rdl
 
 				if (scopeToken != null)
 				{
-					if (scopeToken.Type != TokenTypes.QUOTE)
+					if (scopeToken.Type == TokenTypes.QUOTE)
+					{
+						// A quoted scope names a DataSet; capture it so field references inside
+						// the aggregate resolve against that DataSet.
+						inAggregateDataSet = this.idLookup.ScopeDataSet(scopeToken.Value);
+						if (inAggregateDataSet == null && !isRunningValue)
+							throw new ParserException(string.Format(Strings.Parser_ErrorP_ScopeNotKnownDataSet, scopeToken.Value));
+					}
+					else if (!isRunningValue)
+					{
 						throw new ParserException(string.Format(Strings.Parser_ErrorP_ScopeMustConstant, scopeToken.Value));
-					inAggregateDataSet = this.idLookup.ScopeDataSet(scopeToken.Value);
-					if (inAggregateDataSet == null)
-						throw new ParserException(string.Format(Strings.Parser_ErrorP_ScopeNotKnownDataSet, scopeToken.Value));
+					}
+					// For RunningValue a non-quoted scope is a grouping name; it is resolved
+					// later in ResolveAggrScope, so no DataSet capture is required here.
 				}
 			}
 
@@ -652,7 +650,7 @@ namespace Majorsilence.Reporting.Rdl
 			bool bSimple;
 			if (!bOnePart)				
             {
-                result = (firstPart == "Parameters")?
+                result = (string.Equals(firstPart, "Parameters", StringComparison.InvariantCultureIgnoreCase))?
                     ResolveParametersMethod(method, thirdPart, args):
                     ResolveMethodCall(fullname, args);	// throw exception when fails
             }
@@ -1056,7 +1054,12 @@ namespace Majorsilence.Reporting.Rdl
 						bCodeFunction = true;
 				}
 				if (cls != "" && !bCodeFunction)
+				{
+					// AOT registered-provider path: no compiled class to inspect at parse time
+					if (cls.ToLower() == "code" && RdlEngineConfig.CodeProviderFactory != null)
+						return new FunctionCode(method, args, TypeCode.Object);
 					throw new ParserException(string.Format(Strings.Parser_ErrorP_NotCodeMethod, method));
+				}
 			}
 
 			// See if this is a function within the instance classes
@@ -1073,33 +1076,18 @@ namespace Majorsilence.Reporting.Rdl
 					cType= idLookup.LookupType(rc.ClassName);	// yes, use the classname of the ReportClass
 				}
 			}
-			string syscls=null;
+			string syscls = null;
 
 			if (cType == null)
 			{	// ok try for some of the system functions
-
-				switch(cls)
+				(cType, syscls) = cls switch
 				{
-					case "Math":
-						syscls = "System.Math";
-						break;
-					case "String":
-						syscls = "System.String";
-						break;
-					case "Convert":
-						syscls = "System.Convert";
-						break;
-					case "Financial":
-						syscls = "Majorsilence.Reporting.Rdl.Financial";
-						break;
-					default:
-						syscls = "Majorsilence.Reporting.Rdl.VBFunctions";
-						break;
-				}
-				if (syscls != null)
-				{
-					cType = Type.GetType(syscls, false, true);
-				}
+					"Math"      => (typeof(System.Math),    "System.Math"),
+					"String"    => (typeof(string),          "System.String"),
+					"Convert"   => (typeof(System.Convert),  "System.Convert"),
+					"Financial" => (typeof(Financial),       "Majorsilence.Reporting.Rdl.Financial"),
+					_           => (typeof(VBFunctions),     "Majorsilence.Reporting.Rdl.VBFunctions"),
+				};
 			}
 
 			if (cType == null)

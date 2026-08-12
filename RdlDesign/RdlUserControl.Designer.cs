@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(RdlUserControl));
+            this.DoubleBuffered = true;
 			this.splitContainer1 = new System.Windows.Forms.SplitContainer();
 			this.rdlEditPreview1 = new Majorsilence.Reporting.RdlDesign.RdlEditPreview();
 			this.mainProperties = new Majorsilence.Reporting.RdlDesign.PropertyCtl();
@@ -78,10 +79,7 @@
 			this.foreColorPicker1 = new Majorsilence.Reporting.RdlDesign.ColorPicker();
 			this.backColorPicker1 = new Majorsilence.Reporting.RdlDesign.ColorPicker();
 			this.mainTC = new System.Windows.Forms.TabControl();
-			if (Rdl.Utility.Runtime.IsMono == false)
-			{
-				((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
-			}
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
 			this.splitContainer1.Panel1.SuspendLayout();
 			this.splitContainer1.Panel2.SuspendLayout();
 			this.splitContainer1.SuspendLayout();
@@ -548,10 +546,7 @@
 			this.Name = "RdlUserControl";
 			this.splitContainer1.Panel1.ResumeLayout(false);
 			this.splitContainer1.Panel2.ResumeLayout(false);
-			if (Rdl.Utility.Runtime.IsMono == false)
-			{
-				((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
-			}
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
 			this.splitContainer1.ResumeLayout(false);
 			this.mainTB.ResumeLayout(false);
 			this.mainTB.PerformLayout();

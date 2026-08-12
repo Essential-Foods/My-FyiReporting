@@ -14,7 +14,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
     public class Reports_DataProviderTest
     {
         string connectionString = "Data Source=sqlitetestdb2.db;";
-        string dataProvider = "Microsoft.Data.Sqlite";
+        DataProviders dataProvider = DataProviders.SQLite_MicrosoftData;
 
         [SetUp]
         public void Setup()
@@ -47,7 +47,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
                 "SELECT CategoryID, CategoryName, Description FROM Categories",
                 pageHeaderText: "DataProviderTest TestMethod1");
             var ms = new Majorsilence.Reporting.Rdl.MemoryStreamGen();
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ms, Majorsilence.Reporting.Rdl.OutputPresentationType.CSV);
             var text = ms.GetText();
 
@@ -78,7 +78,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
 
             string filepath = System.IO.Path.Combine(Environment.CurrentDirectory, "TestMethodExcelLegacy.xls");
             var ofs = new Majorsilence.Reporting.Rdl.OneFileStreamGen(filepath, true);
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ofs, Majorsilence.Reporting.Rdl.OutputPresentationType.ExcelTableOnly);
 
             Assert.Multiple(() =>
@@ -100,7 +100,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
 
             string filepath = System.IO.Path.Combine(Environment.CurrentDirectory, "TestMethodExcel.xlsx");
             var ofs = new Majorsilence.Reporting.Rdl.OneFileStreamGen(filepath, true);
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ofs, Majorsilence.Reporting.Rdl.OutputPresentationType.Excel2007);
 
             Assert.That(System.IO.File.Exists(filepath), Is.True);
@@ -118,7 +118,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
 
             string filepath = System.IO.Path.Combine(Environment.CurrentDirectory, "TestMethodExcelDataOnly.xlsx");
             var ofs = new Majorsilence.Reporting.Rdl.OneFileStreamGen(filepath, true);
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ofs, Majorsilence.Reporting.Rdl.OutputPresentationType.Excel2007DataOnly);
 
             Assert.That(System.IO.File.Exists(filepath), Is.True);
@@ -136,7 +136,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
 
             string filepath = System.IO.Path.Combine(Environment.CurrentDirectory, "TestMethodPdf.pdf");
             var ofs = new Majorsilence.Reporting.Rdl.OneFileStreamGen(filepath, true);
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ofs, Majorsilence.Reporting.Rdl.OutputPresentationType.PDF);
 
             Assert.Multiple(() =>
@@ -166,7 +166,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
             var fyiReport = await create.GenerateRdl(dt,
                 pageHeaderText: "DataProviderTest TestMethod1");
             var ms = new Majorsilence.Reporting.Rdl.MemoryStreamGen();
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ms, Majorsilence.Reporting.Rdl.OutputPresentationType.CSV);
             var text = ms.GetText();
 
@@ -211,7 +211,7 @@ namespace Majorsilence.Reporting.RdlCreator.Tests
             var fyiReport = await create.GenerateRdl(data,
                 pageHeaderText: "DataProviderTest TestMethod1");
             var ms = new Majorsilence.Reporting.Rdl.MemoryStreamGen();
-            await fyiReport.RunGetData(null);
+            await fyiReport.RunGetData();
             await fyiReport.RunRender(ms, Majorsilence.Reporting.Rdl.OutputPresentationType.CSV);
             var text = ms.GetText();
 

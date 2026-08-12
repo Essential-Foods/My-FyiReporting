@@ -8,7 +8,7 @@
     <DataSource Name="DS1">
       <ConnectionProperties>
         <DataProvider>Microsoft.Data.Sqlite</DataProvider>
-        <ConnectString>Data Source=C:\Users\peter\source\repos\My-FyiReporting\Examples\SqliteExamples\sqlitetestdb2.db</ConnectString>
+        <ConnectString>Data Source=C:\Users\peter\source\repos\Reporting\Examples\SqliteExamples\sqlitetestdb2.db</ConnectString>
       </ConnectionProperties>
     </DataSource>
   </DataSources>
@@ -96,7 +96,7 @@
     </DataSet>
   </DataSets>
   <PageHeader>
-    <Height>.5in</Height>
+    <Height>41.4pt</Height>
     <ReportItems>
       <Textbox Name="Textbox1">
         <Top>.1in</Top>
@@ -107,8 +107,23 @@
         <Style>
           <FontSize>15pt</FontSize>
           <FontWeight>Bold</FontWeight>
+          <BackgroundColor>Bisque</BackgroundColor>
         </Style>
       </Textbox>
+      <Image Name="Image1">
+        <Height>28.25pt</Height>
+        <Width>103.12pt</Width>
+        <Left>462.70pt</Left>
+        <Top>4.80pt</Top>
+        <Style>
+          <BorderStyle />
+          <BorderColor />
+          <BorderWidth />
+        </Style>
+        <MIMEType>image/png</MIMEType>
+        <Source>Database</Source>
+        <Value>=Convert.FromBase64String({?Logo})</Value>
+      </Image>
     </ReportItems>
     <PrintOnFirstPage>true</PrintOnFirstPage>
     <PrintOnLastPage>true</PrintOnLastPage>
@@ -125,7 +140,7 @@
         </Style>
         <TableColumns>
           <TableColumn>
-            <Width>1.25in</Width>
+            <Width>150.4pt</Width>
           </TableColumn>
           <TableColumn>
             <Width>1in</Width>
@@ -436,19 +451,19 @@
                 <TableCell>
                   <ReportItems>
                     <CustomReportItem Name="EmployeeID">
-                        <Type>QR Code</Type>
+                      <Type>={?BarcodeType}</Type>
                       <Height>30.91mm</Height>
-                      <Width>30.91mm</Width>
-                        <CustomProperties>
-                          <CustomProperty>
-                            <Name>QrCode</Name>
-                            <Value>=Fields!EmployeeID.Value</Value>
-                          </CustomProperty>
-                        </CustomProperties>
+                      <Width>60.91mm</Width>
+                      <CustomProperties>
+                        <CustomProperty>
+                          <Name>Code</Name>
+                          <Value>=Fields!EmployeeID.Value + Fields!LastName.Value</Value>
+                        </CustomProperty>
+                      </CustomProperties>
                       <Left>1.13pt</Left>
                       <Top>0.75pt</Top>
                       <Source>Embedded</Source>
-                     </CustomReportItem>
+                    </CustomReportItem>
                   </ReportItems>
                 </TableCell>
                 <TableCell>
@@ -718,4 +733,46 @@
   </PageFooter>
   <DataElementName>Report</DataElementName>
   <DataElementStyle>AttributeNormal</DataElementStyle>
+  <ReportParameters>
+    <ReportParameter Name="BarcodeType">
+      <DataType>String</DataType>
+      <DefaultValue>
+        <Values>
+          <Value>QrCode</Value>
+        </Values>
+      </DefaultValue>
+      <Nullable>false</Nullable>
+      <AllowBlank>false</AllowBlank>
+      <MultiValue>false</MultiValue>
+      <Prompt></Prompt>
+      <ValidValues>
+        <ParameterValues>
+          <ParameterValue>
+            <Value>QrCde</Value>
+          </ParameterValue>
+          <ParameterValue>
+            <Value>AztecCode</Value>
+          </ParameterValue>
+          <ParameterValue>
+            <Value>DataMatrix</Value>
+          </ParameterValue>
+          <ParameterValue>
+            <Value>Pdf417</Value>
+          </ParameterValue>
+        </ParameterValues>
+      </ValidValues>
+    </ReportParameter>
+    <ReportParameter Name="Logo">
+      <DataType>String</DataType>
+      <Nullable>true</Nullable>
+      <AllowBlank>true</AllowBlank>
+      <MultiValue>false</MultiValue>
+      <Prompt />
+      <DefaultValue>
+        <Values>
+          <Value></Value>
+        </Values>
+      </DefaultValue>
+    </ReportParameter>
+  </ReportParameters>
 </Report>

@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Xml;
@@ -47,9 +26,10 @@ namespace Majorsilence.Reporting.Rdl
     [Serializable]
 	internal class CustomReportItem : Rectangle
 	{
-        static readonly ImageFormat IMAGEFORMAT = ImageFormat.Jpeg;
+        static readonly ImageFormat IMAGEFORMAT = ImageFormat.Png;
         string _Type;   // The type of the custom report item. Interpreted by a
 						// report design tool or server.
+                        private Expression _typeExpression=null;
 		XmlNode xNode;
         System.Collections.Generic.List<CustomProperty> _Properties;
 	
@@ -64,22 +44,27 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "Type":
+					case "type":
 						_Type = xNodeLoop.InnerText;
-						break;
-					case "ReportItems":         // Version 1 of the specification
+                        if (_Type.StartsWith("="))
+                        {
+                            _typeExpression = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.String);
+                        }
+
+                        break;
+					case "reportitems":         // Version 1 of the specification
 						ris = new ReportItems(r, this, xNodeLoop);
                         bVersion2 = false;
 						break;
-                    case "AltReportItem":       // Verstion 2 of the specification
+                    case "altreportitem":       // Verstion 2 of the specification
                         ris = new ReportItems(r, this, xNodeLoop);
                         break;
-                    case "CustomProperties":
+                    case "customproperties":
                         _Properties = CustomProperties(xNodeLoop);
                         break;
-                    case "Source":
+                    case "source":
                         // HACK: support custom report items as embedded
                         break;
                     default:
@@ -114,6 +99,8 @@ namespace Majorsilence.Reporting.Rdl
                     await cp.Value.FinalPass();
                 }
             }
+            
+            await GetCriType(null, null);
 
             // Find out whether the type is known
             ICustomReportItem cri = null;
@@ -142,6 +129,7 @@ namespace Majorsilence.Reporting.Rdl
             ICustomReportItem cri = null;
             try
             {
+                await GetCriType(row, rpt);
                 cri = RdlEngineConfig.CreateCustomReportItem(_Type);
 				Type a = cri.GetType();
 				Draw2.Bitmap bm = null;
@@ -166,19 +154,21 @@ namespace Majorsilence.Reporting.Rdl
 				encoderParameters.Param[0] = new Draw2.Imaging.EncoderParameter(Draw2.Imaging.Encoder.Quality, ImageQualityManager.CustomImageQuality);
 				ImageCodecInfo codec = null;
 				for(int i = 0; i < info.Length; i++) {
-					if(info[i].FormatDescription == "JPEG") {
+					if(info[i].FormatDescription == "PNG") {
 						codec = info[i];
 						break;
 					}
 				}
 				bm.Save(ostrm, codec, encoderParameters);
+                bm.Dispose();
 
                 await ip.Image(new Image(rpt.ReportDefinition, this, xNode), row, null, ostrm);
 				ostrm.Close();
             }
             catch (Exception ex)
             {
-                rpt.rl.LogError(8, string.Format("Exception in CustomReportItem handling.\n{0}\n{1}", ex.Message, ex.StackTrace));
+                int severity = IsCriNativeLibraryException(ex) ? 4 : 8;
+                rpt.rl.LogError(severity, string.Format("Exception in CustomReportItem handling.\n{0}\n{1}", ex.Message, ex.StackTrace));
             }
             finally
             {
@@ -187,6 +177,16 @@ namespace Majorsilence.Reporting.Rdl
             }
 
             return;
+        }
+
+        private async Task GetCriType(Row row, Report rpt)
+        {
+            if (_typeExpression != null)
+            {
+                //_Type = await exp.EvaluateString(OwnerReport, null);
+                await _typeExpression.FinalPass();
+                _Type = await _typeExpression.EvaluateString(rpt, row);
+            }
         }
 
         override internal async Task RunPage(Pages pgs, Row row)
@@ -203,15 +203,18 @@ namespace Majorsilence.Reporting.Rdl
             ICustomReportItem cri = null;
             try
             {
+                await GetCriType(row, rpt);
                 cri = RdlEngineConfig.CreateCustomReportItem(_Type);
                 await SetProperties(pgs.Report, row, cri);
                 
                 Draw2.Imaging.EncoderParameters encoderParameters = new Draw2.Imaging.EncoderParameters(1);
                 // 20022008 AJM GJL - Using centralised image quality
                 encoderParameters.Param[0] = new Draw2.Imaging.EncoderParameter(Draw2.Imaging.Encoder.Quality, ImageQualityManager.CustomImageQuality);
-                ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().First(x => x.FormatDescription == "JPEG");
+                ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().First(x => x.FormatDescription == "PNG");
 
-                PageImage pi = new PageImage(IMAGEFORMAT, ((format, width, height) => GenerateImage(codec, encoderParameters, width, height, cri)), ImageSizingEnum.Clip);	// Create an image
+                PageImage pi = new PageImage(IMAGEFORMAT, 
+                    ((format, width, height) => GenerateImage(codec, encoderParameters, width, height, cri)),
+                    ImageSizingEnum.Clip);	// Create an image
 
                 await SetPagePositionAndStyle(rpt, pi, row);
 
@@ -230,7 +233,8 @@ namespace Majorsilence.Reporting.Rdl
             }
             catch (Exception ex)
             {
-                rpt.rl.LogError(8, string.Format("Exception in CustomReportItem handling: {0}", ex.Message));
+                int severity = IsCriNativeLibraryException(ex) ? 4 : 8;
+                rpt.rl.LogError(severity, string.Format("Exception in CustomReportItem handling: {0}", ex.Message));
             }
             finally
             {
@@ -242,15 +246,33 @@ namespace Majorsilence.Reporting.Rdl
 
         byte[] GenerateImage(ImageCodecInfo codec, Draw2.Imaging.EncoderParameters parameters, int width, int height, ICustomReportItem cri)
 		{
-			Draw2.Bitmap bm = new Draw2.Bitmap(width, height);
-			cri.DrawImage(ref bm);
+            try
+            {
+                Draw2.Bitmap bm = new Draw2.Bitmap(width, height);
+                cri.DrawImage(ref bm);
 
-			MemoryStream ostrm = new MemoryStream();
-			bm.Save(ostrm, codec, parameters);
-			byte[] ba = ostrm.ToArray();
-			ostrm.Close();
-			return ba;
+                MemoryStream ostrm = new MemoryStream();
+                bm.Save(ostrm, codec, parameters);
+                byte[] ba = ostrm.ToArray();
+                ostrm.Close();
+                bm.Dispose();
+                return ba;
+            }
+            catch (Exception)
+            {
+                return Array.Empty<byte>();
+            }
 		}
+
+        static bool IsCriNativeLibraryException(Exception ex)
+        {
+            for (Exception e = ex; e != null; e = e.InnerException)
+            {
+                if (e is TypeInitializationException || e is System.DllNotFoundException)
+                    return true;
+            }
+            return false;
+        }
 
         async Task SetProperties(Report rpt, Row row, ICustomReportItem cri)
         {
@@ -258,7 +280,7 @@ namespace Majorsilence.Reporting.Rdl
                 return;
 
             System.Collections.Generic.Dictionary<string, object> dict =
-                new Dictionary<string, object>(_Properties.Count);
+                new Dictionary<string, object>(_Properties.Count, StringComparer.OrdinalIgnoreCase);
             foreach (CustomProperty cp in _Properties)
             {
                 string name = await cp.Name.EvaluateString(rpt, row);
@@ -286,9 +308,9 @@ namespace Majorsilence.Reporting.Rdl
             List<CustomProperty> cps = new List<CustomProperty>(xNode.ChildNodes.Count);
             foreach (XmlNode xNodeLoop in xNode.ChildNodes)
             {
-                switch (xNodeLoop.Name)
+                switch (xNodeLoop.Name.ToLowerInvariant())
                 {
-                    case "CustomProperty":
+                    case "customproperty":
                         CustomProperty cp = CustomProperty(xNodeLoop);
                         if (cp != null)
                             cps.Add(cp);
@@ -307,12 +329,12 @@ namespace Majorsilence.Reporting.Rdl
             CustomProperty cp = null;
             foreach (XmlNode xNodeLoop in xNode.ChildNodes)
             {
-                switch (xNodeLoop.Name)
+                switch (xNodeLoop.Name.ToLowerInvariant())
                 {
-                    case "Name":
+                    case "name":
                         name = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.String);
                         break;
-                    case "Value":
+                    case "value":
                         val = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.Variant);
                         break;
                     default:

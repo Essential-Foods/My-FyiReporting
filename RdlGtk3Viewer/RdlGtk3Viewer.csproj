@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<RootNamespace>fyiReporting.RdlGtk3Viewer</RootNamespace>
+		<RootNamespace>RdlGtk3Viewer</RootNamespace>
 		<AssemblyName>RdlGtk3Viewer</AssemblyName>
 		<Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
-		<TargetFrameworks>net8.0</TargetFrameworks>
+		<TargetFrameworks>net8.0;net10.0</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
+        <IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -14,7 +15,10 @@
 
 	<ItemGroup>
 		<PackageReference Include="GtkSharp" />
+		<PackageReference Include="Microsoft.Data.SqlClient" />
 		<PackageReference Include="Microsoft.Data.Sqlite" />
+		<PackageReference Include="MySql.Data" />
+		<PackageReference Include="Npgsql" />
 	</ItemGroup>
 
 </Project>

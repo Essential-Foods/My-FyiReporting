@@ -212,31 +212,35 @@ namespace Majorsilence.Reporting.Rdl
 
         // ...
 
+#if NET48
+        public Task GetUrlData(string url)
+#else
         public async Task GetUrlData(string url)
+#endif
         {
             Uri uri = new Uri(url);
             if (!uri.IsFile)
                 throw new UriFormatException("url is not a local file");
 
-            using (HttpClient client = new HttpClient())
+            string localPath = uri.LocalPath;
+            if (!File.Exists(localPath))
             {
-                client.AddMajorsilenceReportingUserAgent();
-                HttpResponseMessage response = await client.GetAsync(url);
-                if (!response.IsSuccessStatusCode)
-                {
-                    this.Clear();
-                    return;
-                }
+                this.Clear();
+#if NET48
+                return Task.CompletedTask;
+#else
+                return;
+#endif
+            }
 
-                _ResponseBytes = await response.Content.ReadAsByteArrayAsync();
-
-                // For local operations, we consider the data are never compressed. Else, the "Content-Encoding" field
-                // in the headers would be "gzip" or "deflate". This could be handled quite easily with SharpZipLib for instance.
-
-                // sometimes URL is indeterminate, eg, "http://website.com/myfolder"
-                // in that case the folder and file resolution MUST be done on 
-                // the server, and returned to the client as ContentLocation
-                _ContentLocation = response.Content.Headers.ContentLocation?.ToString() ?? "";
+            // HttpClient does not support file:// URIs on non-Windows platforms.
+            // Read local files directly to avoid the platform limitation.
+#if NET48
+            _ResponseBytes =  File.ReadAllBytes(localPath);
+#else
+            _ResponseBytes = await File.ReadAllBytesAsync(localPath);
+#endif
+            _ContentLocation = "";
 
                 // if we have string content, determine encoding type
                 // (must cast to prevent null)
@@ -267,8 +271,7 @@ namespace Majorsilence.Reporting.Rdl
 
                     case "js": _DetectedContentType = "application/x-javascript"; break;
                     default:
-                        // Line commented: we don't change it
-                        _DetectedContentType = response.Content.Headers.ContentType?.ToString() ?? ""; // Always "application/octet-stream" ...
+                        _DetectedContentType = "application/octet-stream";
                         break;
                 }
                 if (_DetectedContentType == null)
@@ -277,12 +280,15 @@ namespace Majorsilence.Reporting.Rdl
                     _DetectedEncoding = null;
                 else if (_ForcedEncoding == null)
                     _DetectedEncoding = DetectEncoding(_DetectedContentType, _ResponseBytes);
-            }
+                
+#if NET48
+                return Task.CompletedTask;
+#endif
         }
 
-		#endregion Public methods
+#endregion Public methods
 		
-		#region Private methods
+        #region Private methods
 		/// <summary>
 		/// attempt to convert this charset string into a named .NET text encoding
 		/// </summary>
@@ -340,9 +346,9 @@ namespace Majorsilence.Reporting.Rdl
 			}
 		}
 
-		#endregion Private methods
+        #endregion Private methods
 	
-		#region Nested class : ExtendedBinaryReader
+        #region Nested class : ExtendedBinaryReader
 		/// <summary>
 		///   Extends the <see cref="System.IO.BinaryReader"/> class by a <see cref="ReadToEnd"/>
 		///   method that can be used to read a whole file.
@@ -436,6 +442,6 @@ namespace Majorsilence.Reporting.Rdl
 			}
 
 		}
-		#endregion Nested class : ExtendedBinaryReader
+        #endregion Nested class : ExtendedBinaryReader
 	}
 }

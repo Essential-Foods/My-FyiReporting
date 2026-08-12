@@ -1,4 +1,5 @@
-﻿using System;
+#if WINDOWS || NET48
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace EncryptionProvider
             prompt.Height = 200;
             prompt.FormBorderStyle = FormBorderStyle.FixedDialog;
             prompt.Text = caption;
-            
+
             Label textLabel = new Label() {Left = 50, Top = 20, Width = 400, Height = 110, Text = text};
             TextBox textBox = new TextBox() {Left = 50, Top = 100, Width = 400};
             Button confirmation = new Button()
@@ -51,7 +52,8 @@ namespace EncryptionProvider
             return textBox.Text;
         }
 
-       
-            
+
+
     }
 }
+#endif

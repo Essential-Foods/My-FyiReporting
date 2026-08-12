@@ -1,0 +1,27 @@
+@{
+    ViewData["Title"] = "Report Designer";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Report Designer</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    report-designer { display: block; width: 100%; height: 100vh; }
+  </style>
+</head>
+<body>
+  <report-designer
+    preview-endpoint="/rdl-designer/preview"
+    save-endpoint="/rdl-designer/save"
+    load-endpoint="/rdl-designer/load">
+  </report-designer>
+
+  <script type="module"
+    src="/_content/Majorsilence.Reporting.WebDesigner/rdl-designer/designer.js">
+  </script>
+</body>
+</html>

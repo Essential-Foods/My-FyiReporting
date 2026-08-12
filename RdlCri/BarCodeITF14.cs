@@ -1,58 +1,58 @@
-﻿using Majorsilence.Reporting.Rdl;
+using Majorsilence.Reporting.Rdl;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-
-using System.Text;
 #if DRAWINGCOMPAT
-using Majorsilence.Drawing;
+using Draw2 = Majorsilence.Drawing;
 #else
-using System.Drawing;
+using Draw2 = System.Drawing;
 #endif
 using System.Xml;
-using System.Xml.XPath;
 using System.ComponentModel;
-using SkiaSharp;
-using System.IO;
+using ZXing;
 
 namespace Majorsilence.Reporting.Cri
 {
     public class BarCodeITF14 : ICustomReportItem
     {
-
-        static public readonly float OptimalWidth = 78f;                    // Optimal width at mag 1
-        static public readonly float OptimalHeight = 39f;        // use ratio of 2.5
+        static public readonly float OptimalWidth = 78f;
+        static public readonly float OptimalHeight = 39f;
         private string _Itf14Data;
 
-        public void Dispose()
+        public void Dispose() { }
+
+        public void DrawDesignerImage(ref Draw2.Bitmap bm)
         {
-            return;
+            InternalDraw(ref bm, "12345678901231");
         }
 
-        public void DrawDesignerImage(ref Bitmap bm)
-        {
-            InternalDraw(ref bm, "1234567891011");
-        }
-
-        public void DrawImage(ref Bitmap bm)
+        public void DrawImage(ref Draw2.Bitmap bm)
         {
             InternalDraw(ref bm, _Itf14Data);
         }
 
-        private void InternalDraw(ref Bitmap bm, string value)
+        private void InternalDraw(ref Draw2.Bitmap bm, string value)
         {
-            var barcode = new BarcodeStandard.Barcode()
-            {
-                EncodedType = BarcodeStandard.Type.Itf14,
-                IncludeLabel = true,
-               // Width = (int)OptimalWidth,
-               // Height = (int)OptimalHeight
-            };
-            var v = barcode.Encode(value);
- 
-            var img = Image.FromStream(v.Encode().AsStream());
+#if DRAWINGCOMPAT
+            var writer = new ZXing.SkiaSharp.BarcodeWriter();
+#elif NETSTANDARD2_0 || NET5_0_OR_GREATER
+            var writer = new ZXing.Windows.Compatibility.BarcodeWriter();
+#else
+            var writer = new ZXing.BarcodeWriter();
+#endif
+            writer.Format = BarcodeFormat.ITF;
+            writer.Options.Width = Math.Max(1, bm.Width);
+            writer.Options.Height = Math.Max(1, bm.Height);
+            writer.Options.Hints[EncodeHintType.CHARACTER_SET] = "UTF-8";
 
-            bm = new Bitmap(img);
+#if NET8_0_OR_GREATER
+            try
+            {
+                System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+            }
+            catch (InvalidOperationException) { }
+#endif
+
+            bm = writer.Write(value);
         }
 
         public string GetCustomReportItemXml()
@@ -102,31 +102,24 @@ namespace Majorsilence.Reporting.Cri
                 _Itf14Data = props["ITF14"].ToString();
                 if (_Itf14Data.Length < 13 || _Itf14Data.Length > 14)
                     throw new Exception("ITF 14 data must be of length 13 or 14");
-
             }
             catch (KeyNotFoundException)
             {
                 throw new Exception("ITF14 property must be specified");
             }
-
         }
 
         public void SetPropertiesInstance(XmlNode node, object inst)
         {
-            node.RemoveAll();       // Get rid of all properties
+            node.RemoveAll();
 
             var itfCode = inst as BarCodePropertiesItf14;
             if (itfCode == null)
                 return;
 
-            XmlHelpers.CreateChild(node, "ITF14", itfCode.Itf24);
+            XmlHelpers.CreateChild(node, "ITF14", itfCode.Itf14);
         }
 
-
-        /// <summary>
-        /// BarCodeProperties- All properties are type string to allow for definition of
-        /// a runtime expression.
-        /// </summary>
         public class BarCodePropertiesItf14
         {
             string _itf14Data;
@@ -144,14 +137,12 @@ namespace Majorsilence.Reporting.Cri
                 _itf14Data = ns;
             }
 
-            [Category("ITF14"), Description("The text string to be encoded as a ITF14 Code.")]
-            public string Itf24
+            [Category("ITF14"), Description("The text string to be encoded as a ITF14 barcode.")]
+            public string Itf14
             {
                 get { return _itf14Data; }
                 set { _itf14Data = value; _itf14.SetPropertiesInstance(_node, this); }
             }
-
-
         }
     }
 }

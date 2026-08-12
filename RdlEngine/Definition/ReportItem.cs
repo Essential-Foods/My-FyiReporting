@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Xml;
@@ -133,9 +112,9 @@ namespace Majorsilence.Reporting.Rdl
 			// Run thru the attributes
 			foreach(XmlAttribute xAttr in xNode.Attributes)
 			{
-				switch (xAttr.Name)
+				switch (xAttr.Name.ToLowerInvariant())
 				{
-					case "Name":
+					case "name":
 						_Name = new Name(xAttr.Value);
 						break;
 				}
@@ -144,57 +123,57 @@ namespace Majorsilence.Reporting.Rdl
 
 		internal bool ReportItemElement(XmlNode xNodeLoop)
 		{
-			switch (xNodeLoop.Name)
+			switch (xNodeLoop.Name.ToLowerInvariant())
 			{
-				case "Style":
+				case "style":
 					_Style = new Style(OwnerReport, this, xNodeLoop);
 					break;
-				case "Action":
+				case "action":
 					_Action = new Action(OwnerReport, this, xNodeLoop);
 					break;
-				case "Top":
+				case "top":
 					_Top = new RSize(OwnerReport, xNodeLoop);
 					break;
-				case "Left":
+				case "left":
 					_Left = new RSize(OwnerReport, xNodeLoop);
 					break;
-				case "Height":
+				case "height":
 					_Height = new RSize(OwnerReport, xNodeLoop);
 					break;
-				case "Width":
+				case "width":
 					_Width = new RSize(OwnerReport, xNodeLoop);
 					break;
-				case "ZIndex":
+				case "zindex":
 					_ZIndex = XmlUtil.Integer(xNodeLoop.InnerText);
 					break;
-				case "Visibility":
+				case "visibility":
 					_Visibility = new Visibility(OwnerReport, this, xNodeLoop);
 					break;
-				case "ToolTip":
+				case "tooltip":
 					_ToolTip = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.String);
 					break;
-				case "Label":
+				case "label":
 					_Label = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.Variant);
 					break;
-				case "LinkToChild":
+				case "linktochild":
 					_LinkToChild = xNodeLoop.InnerText;
 					break;
-				case "Bookmark":
+				case "bookmark":
 					_Bookmark = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.String);
 					break;
-				case "RepeatWith":
+				case "repeatwith":
 					_RepeatWith = xNodeLoop.InnerText;
 					break;
-				case "Custom":
+				case "custom":
 					_Custom = new Custom(OwnerReport, this, xNodeLoop);
 					break;
-				case "DataElementName":
+				case "dataelementname":
 					_DataElementName = xNodeLoop.InnerText;
 					break;
-				case "DataElementOutput":
+				case "dataelementoutput":
 					_DataElementOutput = Majorsilence.Reporting.Rdl.DataElementOutput.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 					break;
-                case "rd:DefaultName":
+                case "rd:defaultname":
                     break;      // MS tag: we don't use but don't want to generate a warning
 				default:  
 					return false;	// Not a report item element

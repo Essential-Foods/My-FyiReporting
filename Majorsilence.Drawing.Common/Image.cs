@@ -13,6 +13,20 @@ namespace Majorsilence.Drawing
         public int Width => _skBitmap.Width;
         public int Height => _skBitmap.Height;
 
+        public float HorizontalResolution { get; set; } = 96f;
+        public float VerticalResolution { get; set; } = 96f;
+
+        public void SetResolution(float xDpi, float yDpi)
+        {
+            HorizontalResolution = xDpi;
+            VerticalResolution = yDpi;
+        }
+
+        /// <summary>
+        /// Gets the underlying SkiaSharp bitmap
+        /// </summary>
+        public SKBitmap? SkiaBitmap => _skBitmap;
+
         public Image(SKBitmap bitmap)
         {
             _skBitmap = bitmap;
@@ -32,6 +46,12 @@ namespace Majorsilence.Drawing
             }
         }
 
+        public Image(MemoryStream ms)
+        {
+            ms.Position = 0;
+            _skBitmap = SKBitmap.Decode(ms);
+        }
+        
         public static Image FromFile(string path)
         {
             var bitmap = SKBitmap.Decode(path);

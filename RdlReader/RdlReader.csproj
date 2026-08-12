@@ -2,18 +2,19 @@
 	<PropertyGroup>
 		<ProjectType>Local</ProjectType>
 		<ApplicationIcon>App.ico</ApplicationIcon>
-		<AssemblyKeyContainerName></AssemblyKeyContainerName>
 		<DelaySign>false</DelaySign>
 		<OutputType>WinExe</OutputType>
+		<IsPackable>false</IsPackable>
 		<RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
 		<UseWindowsForms>true</UseWindowsForms>
 		<ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 		<Configurations>Debug;Release;Debug-DrawingCompat</Configurations>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
 		<ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
+        <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
 	</PropertyGroup>
 	<ItemGroup>
 		<Reference Update="System">
@@ -45,6 +46,9 @@
 			<Generator>ResXFileCodeGenerator</Generator>
 			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
 		</EmbeddedResource>
+		<EmbeddedResource Include="RdlReader.fr.resx">
+            <DependentUpon>RdlReader.cs</DependentUpon>
+        </EmbeddedResource>
 		<EmbeddedResource Include="RdlReader.resx">
 			<DependentUpon>RdlReader.cs</DependentUpon>
 			<SubType>Designer</SubType>
@@ -77,6 +81,12 @@
 	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
+		<PackageReference Include="Microsoft.Data.SqlClient" />
 		<PackageReference Include="Microsoft.Data.Sqlite" />
+		<PackageReference Include="MySql.Data" />
+		<PackageReference Include="Npgsql" />
 	</ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+        <PackageReference Include="System.Resources.Extensions" />
+    </ItemGroup>
 </Project>

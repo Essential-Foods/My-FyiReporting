@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 				// 20022008 AJM GJL - Added Second Y axis support
 using System;
 using System.Threading.Tasks;
@@ -56,29 +35,29 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "DataPoints":
+					case "datapoints":
 						_Datapoints = new DataPoints(r, this, xNodeLoop);
 						break;
-					case "PlotType":
+					case "plottype":
 						_PlotType = Majorsilence.Reporting.Rdl.PlotType.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-                    case "YAxis":
-                    case "fyi:YAxis":
+                    case "yaxis":
+                    case "fyi:yaxis":
                         _YAxis = xNodeLoop.InnerText;
                         break;
-                    case "NoMarker":
-                    case "fyi:NoMarker":
+                    case "nomarker":
+                    case "fyi:nomarker":
                         _NoMarker = Boolean.Parse(xNodeLoop.InnerText);
                         break;
-                    case "LineSize":
-                    case "fyi:LineSize":
+                    case "linesize":
+                    case "fyi:linesize":
                         _LineSize = xNodeLoop.InnerText;
                         break;
-                    case "fyi:Color":
-                    case "Color":
-                    case "Colour":
+                    case "fyi:color":
+                    case "color":
+                    case "colour":
                         _Colour = xNodeLoop.InnerText;
                         break;
 					default:	

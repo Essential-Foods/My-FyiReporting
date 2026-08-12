@@ -2,12 +2,13 @@
 
 If you have any question about Majorsilence Reporting or do you want to contribute a discussion group for Majorsilence Reporting is available here:
 
-https://groups.google.com/d/forum/myfyireporting
+https://github.com/majorsilence/Reporting/discussions
+
+|         |Linux |Mac | Win |
+|---------|:------:|:------:|:------:|
+|**main**| [![linux](https://github.com/majorsilence/Reporting/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/majorsilence/Reporting/actions/workflows/linux.yml) | [![mac](https://github.com/majorsilence/Reporting/actions/workflows/mac.yml/badge.svg?branch=main)](https://github.com/majorsilence/Reporting/actions/workflows/mac.yml) | [![.github/workflows/windows.yml](https://github.com/majorsilence/Reporting/actions/workflows/windows.yml/badge.svg?branch=main)](https://github.com/majorsilence/Reporting/actions/workflows/windows.yml) |
 
 
-|         |Linux |Win(Deploy) |
-|---------|:------:|:------:|
-|**Release**|NA | [![Build status appveyor](https://ci.appveyor.com/api/projects/status/a44n015bli95rmpw?svg=true)](https://ci.appveyor.com/project/majorsilence/my-fyireporting) | 
 
 # Documentation
 See the [projects wiki](https://github.com/majorsilence/My-FyiReporting/wiki).
@@ -18,24 +19,116 @@ See the [downloads page](https://github.com/majorsilence/My-FyiReporting/wiki/Do
 
 Alternatively if you want keep up with the latest version you can always use Git
 
-    git clone https://github.com/majorsilence/My-FyiReporting.git
+```bash
+git clone https://github.com/majorsilence/Reporting.git
+```
 
 # Introduction
-"FYIReporting Designer is a report and charting system based on Microsoft's Report Definition Language (RDL). 
-Tabular, free form, matrix, charts are fully supported. HTML, PDF, XML, .Net Control, and printing supported. 
-A WYSIWYG designer allows you to create reports without knowledge of RDL. Wizards are available for creating new 
-reports and for inserting new tables, matrixes, and charts into existing reports." (http://www.fyireporting.com/)
+Majorsilence Reporting is a powerful, open-source .NET reporting framework designed for developers who need to create, design, and deliver rich, reports. Supporting modern .NET versions (8.0, 10.0), it provides a flexible and extensible platform for building reports from a variety of data sources. With a drag-and-drop designer, multiple viewer options, and cross-platform support, Majorsilence Reporting is ideal for both desktop and web applications. Whether you need to generate reports programmatically or empower users with a visual designer (windows only), this project offers the tools and documentation to get you started quickly.
 
-Use the report viewer .NET controls from ASP.NET, WPF, or Winforms using C#, F#, VB.NET, IronPython, or any 
-other .NET language.  The winform viewer also works in linux using mono.  An experimental Gtk/WPF/Cocoa viewer also exists. 
+**The core of Majorsilence Reporting supports Linux and macOS for server-side application report generation. Only the WinForms-based designer and viewer are Windows-only.**
 
-Majorsilence Reporting started as My-FyiReporting which was a fork of fyiReporting after it died. It has been rebranded as Majorsilence Reporting to make it clearer that it is a separate forked project.  Majorsilence Reporting is a fork of fyiReporting.  I cannot stress this enough.  This is a FORK.
-The main purpose is to make sure that I have a copy of fyiReporting since that project seems to be dead.  I am leaving the
-github project named My-FyiReporting so links are not broken.  All branding will eventually be replaced with Majorsilence Reporting.
+# Quick start
 
-Also check this [projects wiki](https://github.com/majorsilence/My-FyiReporting/wiki) as information will be slowly added.
+Add these nuget packages to your project.
 
-Majorsilence Reporting is currently built with visual studio 2022 and rider 2024.1 and targets .net 4.8, net6.0 and 8.0.  You can also run the build script.
+```bash
+dotnet add package Majorsilence.Reporting.RdlCreator.SkiaSharp
+dotnet add package Majorsilence.Reporting.RdlEngine.SkiaSharp
+dotnet add package Majorsilence.Reporting.RdlCri.SkiaSharp
+```
+
+If running on linux install the [required fonts](https://github.com/majorsilence/My-FyiReporting/wiki/Linux---PDF-export-and-Fonts).
+
+```bash
+sudo apt install ttf-mscorefonts-installer
+```
+
+You are now ready to create and generate reports.
+
+## c# example, create report, connected to an sql database
+
+See [Database Providers](https://github.com/majorsilence/My-FyiReporting/wiki/Database-Providers-Howto).
+
+```cs
+using Majorsilence.Reporting.RdlCreator;
+
+// One time per app instance
+RdlEngineConfig.RdlEngineConfigInit();
+
+string dataProvider = "[PLACEHOLDER/Json/Microsoft.Data.SqlClient/MySQL.NET/Firebird.NET 2.0/Microsoft.Data.Sqlite/PostgreSQL";
+var create = new Majorsilence.Reporting.RdlCreator.Create();
+
+using var report = await create.GenerateRdl(dataProvider,
+    connectionString,
+    "SELECT CategoryID, CategoryName, Description FROM Categories",
+    pageHeaderText: "DataProviderTest TestMethod1");
+
+string filepath = System.IO.Path.Combine(Environment.CurrentDirectory, "PLACEHOLDER.pdf");
+using var ofs = new Majorsilence.Reporting.Rdl.OneFileStreamGen(filepath, true);
+await report.RunGetData(null);
+await report.RunRender(ofs, Majorsilence.Reporting.Rdl.OutputPresentationType.PDF);
+```
+
+## c# example, create a pdf document
+
+```cs
+using Majorsilence.Reporting.RdlCreator;
+
+// One time per app instance
+RdlEngineConfig.RdlEngineConfigInit();
+
+var document = new Majorsilence.Reporting.RdlCreator.Document()
+{
+    Description = "Sample report",
+    Author = "John Doe",
+    PageHeight = "11in",
+    PageWidth = "8.5in",
+    //Width = "7.5in",
+    TopMargin = ".25in",
+    LeftMargin = ".25in",
+    RightMargin = ".25in",
+    BottomMargin = ".25in"
+}
+.WithPage((page) =>
+{
+    page.WithHeight("10in")
+    .WithWidth("7.5in")
+    .WithText(new Text
+    {
+        Name = "TheSimplePageText",
+        Top = ".1in",
+        Left = ".1in",
+        Width = "6in",
+        Height = ".25in",
+        Value = new Value { Text = "Text Area 1" },
+        Style = new Style { FontSize = "12pt", FontWeight = "Bold" }
+    });
+});
+
+using var fileStream = new FileStream("PLACEHOLDER.pdf", FileMode.Create, FileAccess.Write);
+await document.Create(fileStream);
+```
+
+## c# load an existing rdl report via RdlEngine
+
+note: Notice the namespace and type difference of Majorsilence.Reporting.RdlCreator.Report for creating new rdl reports versus Majorsilence.Reporting.Rdl.Report for running a report.
+
+```cs
+using Majorsilence.Reporting.Rdl;
+
+// One time per app instance
+RdlEngineConfig.RdlEngineConfigInit();
+
+var rdlp = new RDLParser(System.IO.File.ReadAllText(@"C:\path\to\report\file.rdl"));
+using var report = await rdlp.Parse();
+
+string filepath = System.IO.Path.Combine(Environment.CurrentDirectory, "PLACEHOLDER.pdf");
+using var ofs = new Majorsilence.Reporting.Rdl.OneFileStreamGen(filepath, true);
+await report.RunGetData(null);
+await report.RunRender(ofs, Majorsilence.Reporting.Rdl.OutputPresentationType.PDF);
+```
+
 
 # Development
 Majorsilence Reporting is developed with the following workflow:
@@ -44,124 +137,123 @@ Majorsilence Reporting is developed with the following workflow:
 * Someone needs it to do something it doesn't already do
 * That person implements that something and submits a pull request
 * Repeat
+
 If it doesn't have a feature that you want it to have, add it.  If it has a bug you need fixed, fix it.
 
-## Mac
+See [Contribute](https://github.com/majorsilence/My-FyiReporting/wiki/Contribute).
 
-Install mono-libgdiplus.
+# Benchmarks
 
-```bash
-brew install mono-libgdiplus
-```
+## one
 
-For report generation to work set the DYLD_LIBRARY_PATH environment variable:
+BenchmarkDotNet v0.15.2, macOS 26.0.1 (25A362) [Darwin 25.0.0]
+Apple M2, 1 CPU, 8 logical and 8 physical cores
+.NET SDK 9.0.200
+  [Host]     : .NET 8.0.13 (8.0.1325.6609), Arm64 RyuJIT AdvSIMD
+  Job-AKATUD : .NET 8.0.13 (8.0.1325.6609), Arm64 RyuJIT AdvSIMD
 
-```bash
-DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:/opt/homebrew/lib
-```
+BuildConfiguration=Release-DrawingCompat  RunStrategy=Throughput  
 
-## Ubuntu
-
-Install libgdiplus.
-
-```bash
-apt install libgdiplus
-```
-
-For report generation to work set the LD_LIBRARY_PATH environment variable:
-
-```bash
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib
-```
-
-## Contribute:
-All contributions welcome.  I'll try to respond the same day to any emails or pull requests.  Or within a few 
-days at the most.  Small pull requests are best as they are easier to review.
-
-See the wiki page [https://github.com/majorsilence/My-FyiReporting/wiki/Contribute](https://github.com/majorsilence/My-FyiReporting/wiki/Contribute)
-
-### Core Team
-
-* [majorsilence](https://github.com/majorsilence) (Peter Gill)
-* [Gankov](https://github.com/Gankov)
+| Method     | Mean     | Error     | StdDev    | Ratio | RatioSD | Gen0     | Gen1     | Allocated | Alloc Ratio |
+|----------- |---------:|----------:|----------:|------:|--------:|---------:|---------:|----------:|------------:|
+| NestedJson | 5.401 ms | 0.0560 ms | 0.0935 ms |  0.99 |    0.03 | 390.6250 | 125.0000 |   3.12 MB |        1.00 |
 
 
-### Contributors
-
-A big thanks to all of Majorsilence Reporting contributors:
-
-* [ausadmin](https://github.com/ausadmin)
-* [Geek648](https://github.com/Geek648)
-* [kobruleht](https://github.com/kobruleht)
-* [jzielke](https://github.com/jzielke)
-* [gam6itko](https://github.com/gam6itko)
-* [tsliang](https://github.com/tsliang)
-* [mohsenalikhani](https://github.com/mohsenalikhani)
-* [mgroves](https://github.com/mgroves)
-* [sobolev88](https://github.com/sobolev88)
+|Threads|Duration|Source|Calls/Sec|Total Calls|Errors|
+|-------|--------|------|---------:|----------:|-----:|
+|1|30|JsonDataProviderBenchmark|162|4,873|0|
+|20|30|JsonDataProviderBenchmark|362|10,865|0|
+|20|30|JsonDataProviderBenchmark|363|10,894|0|
+|30|30|JsonDataProviderBenchmark|334|10,043|0|
+|40|30|JsonDataProviderBenchmark|316|9,497|0|
+|50|30|JsonDataProviderBenchmark|296|8,905|0|
 
 
-# Layout:
+## two
 
-* DataProviders\DataProviders.sln
-* Images\
-* OracleSp\OracleSp.sln
-	* Requires Oracle Data Provider for .NET
-* RdlAsp\RdlAsp.sln
-	* Asp controls to display reports in asp.net and silverlight pages.
-	* References RdlEngine
-* RdlAsp.Mvc
-	* Asp.net core mvc controllers
-	* WIP
-* RdlCMD\RdlCmd.sln
-	* Command line tools
-	* References RdlEngine
-* RdlCri\RdlCri.sln
-	* Custom Report Controls
-	* References RdlEngine
-* RdlDesign\RdlDesign.sln
-	* Is the main graphical drag and drop designer used to create reports.
-	* References RdlEngine
-	* References RdlViewer
-* RdlDesktop\RdlDesktop.sln
-	* Simple server
-	* References RdlEngine
-* RdlEngine\RdlEngine.sln
-	* Main engine.  Is referenced in many of the other projects
-* RdlGtkViewer\RdlGtkViewer.sln
-	* A Gtk# 2 (gtk-sharp) viewer
-* RdlGtk3
-    * GtkSharp 3 core components
-* RdlGtk3Viewer
-    * GtkSharp 3 viewer
-* RdlReader
-    * Viewer executable
-* RdlViewer
-	* View controls
-	* References RdlEngine
-	* Disabled COM interop
-* RdlMapFile\RdlMapFile.sln
-	 * Map viewer
-* RdlTest\RdlTests.sln
-	 * Tests
-* ReportSever
-	* aspx webforms
-* RdlCreator
-	* Code first report creation and generation
+BenchmarkDotNet v0.15.2, Windows 11 (10.0.26100.6584/24H2/2024Update/HudsonValley)
+Intel Core i5-8350U CPU 1.70GHz (Max: 1.90GHz) (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
+.NET SDK 8.0.414
+  [Host]     : .NET 8.0.20 (8.0.2025.41914), X64 RyuJIT AVX2
+  Job-AKATUD : .NET 8.0.20 (8.0.2025.41914), X64 RyuJIT AVX2
+
+BuildConfiguration=Release-DrawingCompat  RunStrategy=Throughput  
+
+| Method     | Mean     | Error    | StdDev   | Median   | Ratio | RatioSD | Gen0     | Gen1     | Allocated | Alloc Ratio |
+|----------- |---------:|---------:|---------:|---------:|------:|--------:|---------:|---------:|----------:|------------:|
+| NestedJson | 16.67 ms | 0.796 ms | 2.140 ms | 15.84 ms |  1.01 |    0.17 | 727.2727 | 272.7273 |   3.24 MB |        1.00 |
 
 
-# RDL Compliance
-Report file format specifications can be obtained from microsoft.  I believe fyiReporting is currently mostly 
-compatible with RDL 2005.  If you want to add more features see the specfications.
+|Threads|Duration|Source|Calls/Sec|Total Calls|Errors|
+|-------|--------|------|---------:|----------:|-----:|
+|1|30|JsonDataProviderBenchmark|34|1,009|0|
+|20|30|JsonDataProviderBenchmark|64|1,920|0|
+|20|30|JsonDataProviderBenchmark|63|1,893|0|
+|30|30|JsonDataProviderBenchmark|58|1,739|0|
+|40|30|JsonDataProviderBenchmark|49|1,497|0|
+|50|30|JsonDataProviderBenchmark|51|1,546|0|
 
-* RDL specifications: [http://msdn.microsoft.com/en-us/library/dd297486%28v=sql.100%29.aspx](http://msdn.microsoft.com/en-us/library/dd297486%28v=sql.100%29.aspx)
-* 2005 direct link: [http://download.microsoft.com/download/c/2/0/c2091a26-d7bf-4464-8535-dbc31fb45d3c/rdlNov05.pdf](http://download.microsoft.com/download/c/2/0/c2091a26-d7bf-4464-8535-dbc31fb45d3c/rdlNov05.pdf)
-* 2008 direct link: [http://download.microsoft.com/download/6/5/7/6575f1c8-4607-48d2-941d-c69622e11c32/RDL_spec_08.pdf](http://download.microsoft.com/download/6/5/7/6575f1c8-4607-48d2-941d-c69622e11c32/RDL_spec_08.pdf)
-* 2008 R2 direct link: [http://download.microsoft.com/download/B/E/1/BE1AABB3-6ED8-4C3C-AF91-448AB733B1AF/Report%20Definition.xps](http://download.microsoft.com/download/B/E/1/BE1AABB3-6ED8-4C3C-AF91-448AB733B1AF/Report%20Definition.xps)
+## three
 
-# User interface tutorials
-ReportingCloud (another fork) has made some tutorials for using the designer and creating reports. 
-[http://sourceforge.net/projects/reportingcloud/files/](http://sourceforge.net/projects/reportingcloud/files/)
+BenchmarkDotNet v0.15.2, Linux Ubuntu 24.04.3 LTS (Noble Numbat)
+AMD Ryzen 5 3600 4.21GHz, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 8.0.120
+[Host]     : .NET 8.0.20 (8.0.2025.41914), X64 RyuJIT AVX2
+Job-AKATUD : .NET 8.0.20 (8.0.2025.41914), X64 RyuJIT AVX2
+
+BuildConfiguration=Release-DrawingCompat  RunStrategy=Throughput
+
+| Method     | Mean     | Error     | StdDev    | Ratio | RatioSD | Gen0     | Gen1     | Allocated | Alloc Ratio |
+|----------- |---------:|----------:|----------:|------:|--------:|---------:|---------:|----------:|------------:|
+| NestedJson | 5.542 ms | 0.1100 ms | 0.2011 ms |  1.00 |    0.05 | 359.3750 | 125.0000 |   2.94 MB |        1.00 |
 
 
+|Threads|Duration|Source|Calls/Sec|Total Calls|Errors|
+|-------|--------|------|---------:|----------:|-----:|
+|1|30|JsonDataProviderBenchmark|152|4,571|0|
+|20|30|JsonDataProviderBenchmark|403|12,115|0|
+|20|30|JsonDataProviderBenchmark|406|12,196|0|
+|30|30|JsonDataProviderBenchmark|358|10,757|0|
+|40|30|JsonDataProviderBenchmark|315|9,460|0|
+|50|30|JsonDataProviderBenchmark|290|8,720|0|
 
+
+# License
+
+The entire project is Apache 2.0 licensed with select sub projects tri-licensed.  Original code is apache 2.0 only.  New projects are tri-licensed as of 26.0.0.
+
+
+## Apache 2.0 Licensed
+- DataProviders
+- EncryptionProver
+- LibRdlWpfViewer
+- Majorsilence.WinformUtils
+- RdlAsp.Mvc
+- RdlCmd
+- RdlCri
+- RdlDesign
+- RdlDesktop
+- RdlEngine
+- RdlGtk3
+- RdlGtk3Viewer
+- RdlMapFile
+- RdlReader
+- RdlViewer
+- ReportDesigner
+
+## Tri Licensed
+- MIT License               — see LICENSE-MIT in sub folders
+- Apache License 2.0        — see LICENSE-APACHE in sub folders
+- BSD 2-Clause License      — see LICENSE-BSD in sub folders
+
+tri-licensed projects
+
+- Majorsilence.Drawing.Common
+- Majorsilence.Pdf
+- Majorsilence.Pdf.Security
+- Majorsilence.Reporting.UI
+- Majorsilence.Reporting.UI.RdlAvalonia
+- PdfNative
+- RdlCreator
+- RdlNative
+- WebDesigner

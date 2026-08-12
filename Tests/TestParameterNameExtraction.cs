@@ -1,5 +1,5 @@
-﻿using NUnit.Framework;
-using System;
+﻿using Majorsilence.Reporting.RdlDesign;
+using NUnit.Framework;
 
 namespace Tests
 {
@@ -10,7 +10,8 @@ namespace Tests
         [TestCase("={?Test}", "Test")]
         public void ExtractNameFromParameterExpression(string expression, string expectedParameterName)
         {
-            ReportNames t = new fyiReporting.RdlDesign.re
+            var result = DesignerUtility.ExtractParameterNameFromParameterExpression(expression);
+            Assert.That(result, Is.EqualTo(expectedParameterName));
         }
     }
 }

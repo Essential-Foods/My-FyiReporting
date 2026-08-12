@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Xml;
 using System.Collections;
@@ -44,7 +23,7 @@ namespace Majorsilence.Reporting.Rdl
 	/// definition of a instance of a report.
 	///</summary>
 	[Serializable]
-	public class ReportDefn				
+	public class ReportDefn : IDisposable				
 	{
 		internal int _ObjectCount=0;	// master object counter
 		internal ReportLog rl;	// report log
@@ -103,6 +82,7 @@ namespace Majorsilence.Reporting.Rdl
 
 		string _OverwriteConnectionString; // To overwrite ConnectionString
 		bool _OverwriteInSubreport; // Overwrite ConnectionString in subreport too
+		bool _SkipDatabaseSchemaValidation; // When true, skip DB connection at parse time (for SetData() workflows)
 		readonly XmlNode _xNode;
 
         /// <summary>
@@ -118,7 +98,7 @@ namespace Majorsilence.Reporting.Rdl
 
 		// Constructor
 		internal ReportDefn(XmlNode xNode, ReportLog replog, string folder, NeedPassword getpswd, int objcount, CrossDelegate crossdel,
-			string overwriteConnectionString, bool overwriteInSubreport)        // report has no parents
+			string overwriteConnectionString, bool overwriteInSubreport, bool skipDatabaseSchemaValidation = false)        // report has no parents
 		{
             _xNode = xNode;
             rl = replog;                // used for error reporting
@@ -160,15 +140,16 @@ namespace Majorsilence.Reporting.Rdl
 
 			_OverwriteConnectionString = overwriteConnectionString;
 			_OverwriteInSubreport = overwriteInSubreport;
+			_SkipDatabaseSchemaValidation = skipDatabaseSchemaValidation;
 		}
 
 		public async Task InitializeAsync() { 
 			// Run thru the attributes
 			foreach(XmlAttribute xAttr in _xNode.Attributes)
 			{
-				switch (xAttr.Name)
+				switch (xAttr.Name.ToLowerInvariant())
 				{
-					case "Name":
+					case "name":
 						_Name = new Name(xAttr.Value);
 						break;
 				}
@@ -179,84 +160,84 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "Description":
+					case "description":
 						_Description = xNodeLoop.InnerText;
 						break;
-					case "Author":
+					case "author":
 						_Author = xNodeLoop.InnerText;
 						break;
-                    case "Name":
+                    case "name":
                         _Name = new Name(xNodeLoop.InnerText);
                         break;
-                    case "AutoRefresh":
+                    case "autorefresh":
 						_AutoRefresh = XmlUtil.Integer(xNodeLoop.InnerText);
 						break;
-					case "DataSources":
+					case "datasources":
 						_DataSourcesDefn = new DataSourcesDefn(this, null, xNodeLoop);
 						break;
-					case "DataSets":
+					case "datasets":
 						_DataSetsDefn = new DataSetsDefn(this, null, xNodeLoop);
 						break;
-					case "Body":
+					case "body":
 						_Body = new Body(this, null, xNodeLoop);
 						break;
-					case "ReportParameters":
+					case "reportparameters":
 						_ReportParameters = new ReportParameters(this, null, xNodeLoop);
 						break;
-					case "Width":
+					case "width":
 						_Width = new RSize(this, xNodeLoop);
 						break;
-					case "PageHeader":
+					case "pageheader":
 						_PageHeader = new PageHeader(this, null, xNodeLoop);
 						break;
-					case "PageFooter":
+					case "pagefooter":
 						_PageFooter = new PageFooter(this, null, xNodeLoop);
 						break;
-					case "PageHeight":
+					case "pageheight":
 						_PageHeight = new RSize(this, xNodeLoop);
 						break;
-					case "PageWidth":
+					case "pagewidth":
 						_PageWidth = new RSize(this, xNodeLoop);
 						break;
-					case "LeftMargin":
+					case "leftmargin":
 						_LeftMargin = new RSize(this, xNodeLoop);
 						break;
-					case "RightMargin":
+					case "rightmargin":
 						_RightMargin = new RSize(this, xNodeLoop);
 						break;
-					case "TopMargin":
+					case "topmargin":
 						_TopMargin = new RSize(this, xNodeLoop);
 						break;
-					case "BottomMargin":
+					case "bottommargin":
 						_BottomMargin = new RSize(this, xNodeLoop);
 						break;
-					case "EmbeddedImages":
+					case "embeddedimages":
 						_EmbeddedImages = new EmbeddedImages(this, null, xNodeLoop);
 						break;
-					case "Language":
+					case "language":
 						_Language =  new Expression(this, null, xNodeLoop, ExpressionType.String);
 						break;
-					case "Code":
+					case "code":
 						_Code = new Code(this, null, xNodeLoop);
 						break;
-					case "CodeModules":
+					case "codemodules":
 						_CodeModules = new CodeModules(this, null, xNodeLoop);
 						break;
-					case "Classes":
+					case "classes":
 						_Classes = new Classes(this, null, xNodeLoop);
 						break;
-					case "DataTransform":
+					case "datatransform":
 						_DataTransform = xNodeLoop.InnerText;
 						break;
-					case "DataSchema":
+					case "dataschema":
 						_DataSchema = xNodeLoop.InnerText;
 						break;
-					case "DataElementName":
+					case "dataelementname":
 						_DataElementName = xNodeLoop.InnerText;
 						break;
-					case "DataElementStyle":
+					case "dataelementstyle":
 						_DataElementStyle = Majorsilence.Reporting.Rdl.DataElementStyle.GetStyle(xNodeLoop.InnerText, this.rl);
 						break;
 					default:
@@ -817,6 +798,12 @@ namespace Majorsilence.Reporting.Rdl
 			set {_OverwriteInSubreport = value;}
 		}
 
+		internal bool SkipDatabaseSchemaValidation
+		{
+			get {return _SkipDatabaseSchemaValidation;}
+			set {_SkipDatabaseSchemaValidation = value;}
+		}
+
 		internal int ErrorMaxSeverity
 		{
 			get 
@@ -845,6 +832,93 @@ namespace Majorsilence.Reporting.Rdl
 				return;
 			rl.Reset();
 			return;
+		}
+
+		private bool _disposed = false;
+
+		/// <summary>
+		/// Dispose of resources held by ReportDefn including data sources and embedded images.
+		/// </summary>
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		/// <summary>
+		/// Protected implementation of Dispose pattern.
+		/// </summary>
+		/// <param name="disposing">True if called from Dispose(), false if called from finalizer</param>
+		protected virtual void Dispose(bool disposing)
+		{
+			if (_disposed)
+				return;
+
+			if (disposing)
+			{
+				// Dispose managed resources
+				if (_DataSourcesDefn != null)
+				{
+					_DataSourcesDefn.CleanUp(null);
+					_DataSourcesDefn = null;
+				}
+
+				// Clear collections that may hold references to resources
+				if (_DataCache != null)
+				{
+					_DataCache.Clear();
+					_DataCache = null;
+				}
+
+				if (_LUReportItems != null)
+				{
+					_LUReportItems.Clear();
+					_LUReportItems = null;
+				}
+
+				if (_LUAggrScope != null)
+				{
+					_LUAggrScope.Clear();
+					_LUAggrScope = null;
+				}
+
+				if (_LUEmbeddedImages != null)
+				{
+					_LUEmbeddedImages.Clear();
+					_LUEmbeddedImages = null;
+				}
+
+				if (_LUDynamicNames != null)
+				{
+					_LUDynamicNames.Clear();
+					_LUDynamicNames = null;
+				}
+
+				if (_LUGlobals != null)
+				{
+					_LUGlobals.Clear();
+					_LUGlobals = null;
+				}
+
+				if (_LUUser != null)
+				{
+					_LUUser.Clear();
+					_LUUser = null;
+				}
+
+				// Clear references to other objects
+				_DataSetsDefn = null;
+				_Body = null;
+				_PageHeader = null;
+				_PageFooter = null;
+				_EmbeddedImages = null;
+				_ReportParameters = null;
+				_Code = null;
+				_CodeModules = null;
+				_Classes = null;
+			}
+
+			_disposed = true;
 		}
 	}
 }

@@ -1,25 +1,3 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Threading.Tasks;
 using System.Xml;
@@ -104,71 +82,71 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "Visible":
+					case "visible":
 						_Visible = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "Style":
+					case "style":
 						_Style = new Style(r, this, xNodeLoop);
 						break;
-					case "Title":
+					case "title":
 						_Title = new Title(r, this, xNodeLoop);
 						break;
                     // 20022008 AJM GJL - Second Y axis
-                    case "Title2":
-                    case "fyi:Title2":
+                    case "title2":
+                    case "fyi:title2":
                         _Title2 = new Title(r, this, xNodeLoop);
                        break;
-					case "Margin":
+					case "margin":
 						_Margin = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "MajorTickMarks":
+					case "majortickmarks":
 						_MajorTickMarks = AxisTickMarks.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "MinorTickMarks":
+					case "minortickmarks":
 						_MinorTickMarks = AxisTickMarks.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "MajorGridLines":
+					case "majorgridlines":
 						_MajorGridLines = new ChartGridLines(r, this, xNodeLoop);
 						break;
-					case "MinorGridLines":
+					case "minorgridlines":
 						_MinorGridLines = new ChartGridLines(r, this, xNodeLoop);
 						break;
-					case "MajorInterval":
+					case "majorinterval":
 						_MajorInterval = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.Integer);
 						OwnerReport.rl.LogError(4, "Axis element MajorInterval is currently ignored.");
 						break;
-					case "MinorInterval":
+					case "minorinterval":
 						_MinorInterval = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.Integer);
 						OwnerReport.rl.LogError(4, "Axis element MinorInterval is currently ignored.");
 						break;
-					case "Reverse":
+					case "reverse":
 						_Reverse = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "CrossAt":
+					case "crossat":
 						_CrossAt = XmlUtil.Integer(xNodeLoop.InnerText);
 						break;
-					case "Interlaced":
+					case "interlaced":
 						_Interlaced = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "Scalar":
+					case "scalar":
 						_Scalar = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "Min":
+					case "min":
 						_Min = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.Integer);
 						break;
-					case "Max":
+					case "max":
 						_Max = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.Integer);
 						break;
-					case "LogScale":
+					case "logscale":
 						_LogScale = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-                    case "Month":
-                    case "fyi:Month":
+                    case "month":
+                    case "fyi:month":
                         _Month = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
                         break;
-                    case "fyi:CanOmit":
+                    case "fyi:canomit":
                         _CanOmit = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
                         break;
 					default:	

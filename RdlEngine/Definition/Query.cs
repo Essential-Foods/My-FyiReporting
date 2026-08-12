@@ -1,27 +1,7 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Xml;
 using System.Data;
 using System.Data.SqlClient;
@@ -70,24 +50,24 @@ namespace Majorsilence.Reporting.Rdl
             {
                 if (xNodeLoop.NodeType != XmlNodeType.Element)
                     continue;
-                switch (xNodeLoop.Name)
+                switch (xNodeLoop.Name.ToLowerInvariant())
                 {
-                    case "DataSourceName":
+                    case "datasourcename":
                         _DataSourceName = xNodeLoop.InnerText;
                         break;
-                    case "CommandType":
+                    case "commandtype":
                         _QueryCommandType = Majorsilence.Reporting.Rdl.QueryCommandType.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
                         break;
-                    case "CommandText":
+                    case "commandtext":
                         _CommandText = new Expression(r, this, xNodeLoop, ExpressionType.String);
                         break;
-                    case "QueryParameters":
+                    case "queryparameters":
                         _QueryParameters = new QueryParameters(r, this, xNodeLoop);
                         break;
-                    case "Timeout":
+                    case "timeout":
                         _Timeout = XmlUtil.Integer(xNodeLoop.InnerText);
                         break;
-                    case "RowLimit":                // Extension of RDL specification
+                    case "rowlimit":                // Extension of RDL specification
                         _RowLimit = XmlUtil.Integer(xNodeLoop.InnerText);
                         break;
                     default:
@@ -390,6 +370,7 @@ namespace Majorsilence.Reporting.Rdl
 
         }
 
+        [RequiresUnreferencedCode("Reflects over user-provided object types to map fields; members may be trimmed")]
         internal async Task SetData(Report rpt, IEnumerable ie, Fields flds, Filters f, bool collection = false)
         {
             if (ie == null)         // Does user want to remove user data?

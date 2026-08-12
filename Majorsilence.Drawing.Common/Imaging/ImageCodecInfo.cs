@@ -4,7 +4,12 @@
     public class ImageCodecInfo
     {
         public Guid Guid { get; set; }
+        #if NET6_0_OR_GREATER
+        public required string MimeType { get; set; }
+        #else
         public string MimeType { get; set; }
+        #endif
+        
         public ImageFormat Format { get; set; }
         public string FormatDescription
         {

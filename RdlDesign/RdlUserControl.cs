@@ -13,6 +13,7 @@ using System.IO;
 using System.Globalization;
 using System.Xml;
 using System.Drawing.Printing;
+using System.Threading.Tasks;
 
 namespace Majorsilence.Reporting.RdlDesign
 {
@@ -97,6 +98,7 @@ namespace Majorsilence.Reporting.RdlDesign
         /// <summary>
         /// The RDL file that should be displayed.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Uri SourceFile
         {
             get { return _SourceFile; }
@@ -130,12 +132,14 @@ namespace Majorsilence.Reporting.RdlDesign
             return prog;
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string SourceRdl
         {
             get { return this.rdlEditPreview1.GetRdlText(); }
             set { this.rdlEditPreview1.SetRdlText(value); }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string CurrentInsert
         {
             get { return rdlEditPreview1.CurrentInsert; }
@@ -236,6 +240,7 @@ namespace Majorsilence.Reporting.RdlDesign
             return this.rdlEditPreview1.GetRdlText();
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool Modified
         {
             get { return rdlEditPreview1.Modified; }
@@ -312,6 +317,7 @@ namespace Majorsilence.Reporting.RdlDesign
             rdlEditPreview1.ShowEditLines(bShow);
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         internal bool ShowReportItemOutline
         {
             get { return rdlEditPreview1.ShowReportItemOutline; }
@@ -327,6 +333,7 @@ namespace Majorsilence.Reporting.RdlDesign
         /// <summary>
         /// Zoom 
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public float Zoom
         {
             get { return rdlEditPreview1.Zoom; }
@@ -336,6 +343,7 @@ namespace Majorsilence.Reporting.RdlDesign
         /// <summary>
         /// ZoomMode 
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ZoomEnum ZoomMode
         {
             get { return rdlEditPreview1.ZoomMode; }
@@ -694,6 +702,7 @@ namespace Majorsilence.Reporting.RdlDesign
         /// <summary>
         /// Turns the Selection Tool on in report preview
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool SelectionTool
         {
             get
@@ -706,7 +715,7 @@ namespace Majorsilence.Reporting.RdlDesign
             }
         }
 
-        public bool Export(Rdl.OutputPresentationType type)
+        public async Task<bool> ExportAsync(Rdl.OutputPresentationType type)
         {
             SaveFileDialog sfd = new SaveFileDialog();
 			sfd.Title = string.Format(Strings.MDIChild_Export_ExportTitleFormat, type.ToString().ToUpper());
@@ -770,7 +779,7 @@ namespace Majorsilence.Reporting.RdlDesign
                     else if (dr == DialogResult.Cancel)
                         return false;
                 }
-                try { SaveAs(sfd.FileName, type); }
+                try { await SaveAsAsync(sfd.FileName, type); }
                 catch (Exception ex)
                 {
                     MessageBox.Show(this,
@@ -786,9 +795,9 @@ namespace Majorsilence.Reporting.RdlDesign
             }
         }
 
-        public void SaveAs(string filename, OutputPresentationType type)
+        public async Task SaveAsAsync(string filename, OutputPresentationType type)
         {
-            rdlEditPreview1.SaveAs(filename, type);
+            await rdlEditPreview1.SaveAs(filename, type);
         }
 
         public int PageCount
@@ -1214,46 +1223,46 @@ namespace Majorsilence.Reporting.RdlDesign
 
         }
 
-        private void pdfToolStripButton2_Click(object sender, EventArgs e)
+        private async void pdfToolStripButton2_Click(object sender, EventArgs e)
         {
 
-            Export(Rdl.OutputPresentationType.PDF);
+            await ExportAsync(Rdl.OutputPresentationType.PDF);
 
         }
 
-        private void htmlToolStripButton2_Click(object sender, EventArgs e)
+        private async void htmlToolStripButton2_Click(object sender, EventArgs e)
         {
-            Export(Rdl.OutputPresentationType.HTML);
+            await ExportAsync(Rdl.OutputPresentationType.HTML);
         }
 
-        private void excelToolStripButton2_Click(object sender, EventArgs e)
+        private async void excelToolStripButton2_Click(object sender, EventArgs e)
         {
-            Export(Rdl.OutputPresentationType.Excel2007);
+            await ExportAsync(Rdl.OutputPresentationType.Excel2007);
         }
 
-        private void XmlToolStripButton2_Click(object sender, EventArgs e)
+        private async void XmlToolStripButton2_Click(object sender, EventArgs e)
         {
-            Export(Rdl.OutputPresentationType.XML);
+            await ExportAsync(Rdl.OutputPresentationType.XML);
         }
 
-        private void MhtToolStripButton2_Click(object sender, EventArgs e)
+        private async void MhtToolStripButton2_Click(object sender, EventArgs e)
         {
-            Export(Rdl.OutputPresentationType.MHTML);
+            await ExportAsync(Rdl.OutputPresentationType.MHTML);
         }
 
-        private void CsvToolStripButton2_Click(object sender, EventArgs e)
+        private async void CsvToolStripButton2_Click(object sender, EventArgs e)
         {
-            Export(Rdl.OutputPresentationType.CSV);
+            await ExportAsync(Rdl.OutputPresentationType.CSV);
         }
 
-        private void RtfToolStripButton2_Click(object sender, EventArgs e)
+        private async void RtfToolStripButton2_Click(object sender, EventArgs e)
         {
-            Export(Rdl.OutputPresentationType.RTF);
+            await ExportAsync(Rdl.OutputPresentationType.RTF);
         }
 
-        private void TifToolStripButton2_Click(object sender, EventArgs e)
+        private async void TifToolStripButton2_Click(object sender, EventArgs e)
         {
-            Export(Rdl.OutputPresentationType.TIF);
+            await ExportAsync(Rdl.OutputPresentationType.TIF);
         }
 
         private void foreColorPicker1_Validated(object sender, EventArgs e)

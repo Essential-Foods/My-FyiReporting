@@ -1,26 +1,3 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
-
 using System;
 using System.Xml;
 using System.IO;
@@ -54,40 +31,40 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
                     //case "Value":
                     //    _Value = new Expression(r, this, xNodeLoop, ExpressionType.Variant);
                     //    break;
 
-                    case "DataValues":
+                    case "datavalues":
                         _Values = new DataValues(r, p, xNodeLoop);
                         break;
-                    case "DataPoint":
+                    case "datapoint":
 						_DataPoint = (DataPoint) this.OwnerReport.LUDynamicNames[xNodeLoop.InnerText];
 						break;
-                    case "ChartLabel":
+                    case "chartlabel":
                         _ChartLabel = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.Variant);
                         break;
                     // 05122007AJM & GJL Added to store PlotType
-                    case "PlotType":
+                    case "plottype":
                         _PlotType = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.Variant);
                         break;    
                     //140208 GJL Added for left/Right YAxis Support
-                    case "YAxis":
+                    case "yaxis":
                         _YAxis = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.String);
                         break;
-                    case "NoMarker":
-                    case "fyi:NoMarker":
+                    case "nomarker":
+                    case "fyi:nomarker":
                         _NoMarker = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.String);
                         break;
-                    case "LineSize":
-                    case "fyi:LineSize":
+                    case "linesize":
+                    case "fyi:linesize":
                         _LineSize = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.String);
                         break;
-                    case "fyi:Color":
-                    case "Color":
-                    case "Colour":
+                    case "fyi:color":
+                    case "color":
+                    case "colour":
                         _Colour = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.String);
                         break;
 					default:

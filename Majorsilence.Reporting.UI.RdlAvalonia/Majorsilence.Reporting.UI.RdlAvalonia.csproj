@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Library</OutputType>
+        <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <!--Avalonia doesen't support TrimMode=link currently,but we are working on that https://github.com/AvaloniaUI/Avalonia/issues/6892 -->
+        <TrimMode>copyused</TrimMode>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <DefineConstants>$(DefineConstants);DRAWINGCOMPAT</DefineConstants>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+    <ItemGroup>
+        <None Remove=".gitignore"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!--This helps with theme dll-s trimming.
+        If you will publish your application in self-contained mode with p:PublishTrimmed=true and it will use Fluent theme Default theme will be trimmed from the output and vice versa.
+        https://github.com/AvaloniaUI/Avalonia/issues/5593 -->
+        <TrimmableAssembly Include="Avalonia.Themes.Fluent"/>
+        <TrimmableAssembly Include="Avalonia.Themes.Default"/>
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" />
+        <PackageReference Include="Avalonia.Desktop" />
+<PackageReference Include="Avalonia.Themes.Fluent" />
+        <PackageReference Include="XamlNameReferenceGenerator" />
+        <PackageReference Include="SkiaSharp" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Majorsilence.Pdf.Security\Majorsilence.Pdf.Security.csproj" />
+        <ProjectReference Include="..\RdlCri\Majorsilence.Reporting.RdlCri.csproj" />
+        <ProjectReference Include="..\RdlEngine\Majorsilence.Reporting.RdlEngine.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Majorsilence.Drawing.Common\Majorsilence.Drawing.Common.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+      <AdditionalFiles Include="Viewer\AvaloniaReportViewer.axaml" />
+    </ItemGroup>
+</Project>

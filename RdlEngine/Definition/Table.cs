@@ -1,25 +1,4 @@
-﻿/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
+﻿
 using System;
 using System.Xml;
 using System.IO;
@@ -76,33 +55,33 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "TableColumns":
+					case "tablecolumns":
 						_TableColumns = new TableColumns(r, this, xNodeLoop);
 						break;
-					case "Header":
+					case "header":
 						_Header = new Header(r, this, xNodeLoop);
 						break;
-					case "TableGroups":
+					case "tablegroups":
 						_TableGroups = new TableGroups(r, this, xNodeLoop);
 						break;
-					case "Details":
+					case "details":
 						_Details = new Details(r, this, xNodeLoop);
 						break;
-					case "Footer":
+					case "gooter":
 						_Footer = new Footer(r, this, xNodeLoop);
 						break;
-					case "FillPage":
+					case "fillpage":
 						_FillPage = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "DetailDataElementName":
+					case "detaildataelementname":
 						_DetailDataElementName = xNodeLoop.InnerText;
 						break;
-					case "DetailDataCollectionName":
+					case "detaildatacollectionname":
 						_DetailDataCollectionName = xNodeLoop.InnerText;
 						break;
-					case "DetailDataElementOutput":
+					case "detaildataelementoutput":
 						_DetailDataElementOutput = Majorsilence.Reporting.Rdl.DataElementOutput.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
 					default:	

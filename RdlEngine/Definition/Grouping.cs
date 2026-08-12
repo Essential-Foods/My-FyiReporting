@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Xml;
@@ -104,9 +83,9 @@ namespace Majorsilence.Reporting.Rdl
             // Run thru the attributes
             foreach (XmlAttribute xAttr in xNode.Attributes)
 			{
-				switch (xAttr.Name)
+				switch (xAttr.Name.ToLowerInvariant())
 				{
-					case "Name":
+					case "name":
 						_Name = new Name(xAttr.Value);
 						break;
 				}
@@ -116,39 +95,39 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "Label":
+					case "label":
 						_Label = new Expression(r, this, xNodeLoop, ExpressionType.String);
 						break;
-					case "GroupExpressions":
+					case "groupexpressions":
 						_GroupExpressions = new GroupExpressions(r, this, xNodeLoop);
 						break;
-					case "PageBreakAtStart":
+					case "pagebreakatstart":
 						_PageBreakAtStart = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "PageBreakAtEnd":
+					case "pagebreakatend":
 						_PageBreakAtEnd = XmlUtil.Boolean(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-                    case "PageBreakCondition":
+                    case "pagebreakcondition":
                         _PageBreakCondition = new Expression(OwnerReport, this, xNodeLoop, ExpressionType.Boolean);
                         break;
-                    case "Custom":
+                    case "custom":
 						_Custom = new Custom(r, this, xNodeLoop);
 						break;
-					case "Filters":
+					case "filters":
 						_Filters = new Filters(r, this, xNodeLoop);
 						break;
-					case "Parent":
+					case "parent":
 						_ParentGroup = new Expression(r, this, xNodeLoop, ExpressionType.Variant);
 						break;
-					case "DataElementName":
+					case "dataelementname":
 						_DataElementName = xNodeLoop.InnerText;
 						break;
-					case "DataCollectionName":
+					case "datacollectionname":
 						_DataCollectionName = xNodeLoop.InnerText;
 						break;
-					case "DataElementOutput":
+					case "dataelementoutput":
 						_DataElementOutput = Majorsilence.Reporting.Rdl.DataElementOutput.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
 					default:	

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
+    <Platforms>AnyCPU</Platforms>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageId>Majorsilence.Reporting.WebDesigner</PackageId>
+    <Description>Web-based RDL report designer Web Component with ASP.NET Core preview/save/load endpoints.</Description>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RdlCri\Majorsilence.Reporting.RdlCri.csproj" />
+    <ProjectReference Include="..\RdlEngine\Majorsilence.Reporting.RdlEngine.csproj" />
+  </ItemGroup>
+
+</Project>

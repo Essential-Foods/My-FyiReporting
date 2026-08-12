@@ -16,7 +16,7 @@ namespace Majorsilence.Reporting.RdlDesign
     /// </summary>
     internal partial class DialogNewTable 
     {
-        internal DialogNewTable(DesignXmlDraw dxDraw, XmlNode container)
+        public DialogNewTable(DesignXmlDraw dxDraw, XmlNode container)
         {
             _Draw = dxDraw;
             //
@@ -48,7 +48,8 @@ namespace Majorsilence.Reporting.RdlDesign
             }
             else
                 this.cbDataSets.Items.AddRange(datasets);
-            cbDataSets.SelectedIndex = 0;
+            if (cbDataSets.Items.Count > 0)
+                cbDataSets.SelectedIndex = 0;
         }
 
         internal string TableXml

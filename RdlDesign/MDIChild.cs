@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 using System;
 using System.Drawing;
 using System.Collections;
@@ -34,6 +13,7 @@ using Majorsilence.Reporting.Rdl;
 using Majorsilence.Reporting.RdlDesign.Resources;
 using Majorsilence.Reporting.RdlViewer;
 using EncryptionProvider.String;
+using System.Threading.Tasks;
 
 namespace Majorsilence.Reporting.RdlDesign
 {
@@ -75,11 +55,12 @@ namespace Majorsilence.Reporting.RdlDesign
 
             this.Name = "";
             this.Text = "";
-            this.Closing += new System.ComponentModel.CancelEventHandler(this.MDIChild_Closing);
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MDIChild_Closing);
 
             this.ResumeLayout(false);
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         internal TabPage Tab
         {
             get { return _Tab; }
@@ -111,12 +92,15 @@ namespace Majorsilence.Reporting.RdlDesign
         {
             rdlDesigner.ShowPreviewWaitDialog(bShow);
         }
+        
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         internal bool ShowReportItemOutline
         {
             get { return rdlDesigner.ShowReportItemOutline; }
             set { rdlDesigner.ShowReportItemOutline = value; }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string CurrentInsert
         {
             get { return rdlDesigner.CurrentInsert; }
@@ -136,6 +120,7 @@ namespace Majorsilence.Reporting.RdlDesign
             get { return rdlDesigner.CurrentCh; }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         internal DesignTabs DesignTab
         {
 			get
@@ -243,7 +228,7 @@ namespace Majorsilence.Reporting.RdlDesign
             return bOK;
         }
 
-        public bool Export(Rdl.OutputPresentationType type)
+        public async Task<bool> ExportAsync(Rdl.OutputPresentationType type)
         {
             SaveFileDialog sfd = new SaveFileDialog();
             sfd.Title = string.Format(Strings.MDIChild_Export_ExportTitleFormat, type.ToString().ToUpper());
@@ -308,7 +293,7 @@ namespace Majorsilence.Reporting.RdlDesign
                     else if (dr == DialogResult.Cancel)
                         return false;
                 }
-                try { SaveAs(sfd.FileName, type); }
+                try { await SaveAs(sfd.FileName, type); }
                 catch (Exception ex)
                 {
                     MessageBox.Show(this,
@@ -362,6 +347,7 @@ namespace Majorsilence.Reporting.RdlDesign
             return this.rdlDesigner.GetRdlText();
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool Modified
         {
             get { return rdlDesigner.Modified; }
@@ -375,6 +361,7 @@ namespace Majorsilence.Reporting.RdlDesign
         /// <summary>
         /// The RDL file that should be displayed.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Uri SourceFile
         {
             get { return _SourceFile; }
@@ -385,6 +372,14 @@ namespace Majorsilence.Reporting.RdlDesign
                 string rdl = GetRdlSource();
                 this.rdlDesigner.SetRdlText(rdl == null ? "" : rdl);
             }
+        }
+        
+        public async Task SetSourceFileAsync(Uri file)
+        {
+            _SourceFile = file;
+
+            string rdl = await GetRdlSourceAsync();
+             this.rdlDesigner.SetRdlText(rdl == null ? "" : rdl);
         }
 
         private String doPossibleDecryption(String rdl)
@@ -407,6 +402,7 @@ namespace Majorsilence.Reporting.RdlDesign
             return rdl;
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string SourceRdl
         {
             get { return this.rdlDesigner.GetRdlText(); }
@@ -421,6 +417,26 @@ namespace Majorsilence.Reporting.RdlDesign
             {
                 fs = new StreamReader(_SourceFile.LocalPath);
                 prog = fs.ReadToEnd();
+            }
+            finally
+            {
+                if (fs != null)
+                    fs.Close();
+            }
+
+            prog = doPossibleDecryption(prog);
+
+            return prog;
+        }
+        
+        private async Task<string> GetRdlSourceAsync()
+        {
+            StreamReader fs = null;
+            string prog = null;
+            try
+            {
+                fs = new StreamReader(_SourceFile.LocalPath);
+                prog = await fs.ReadToEndAsync();
             }
             finally
             {
@@ -459,6 +475,7 @@ namespace Majorsilence.Reporting.RdlDesign
         /// <summary>
         /// Turns the Selection Tool on in report preview
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool SelectionTool
         {
             get
@@ -482,6 +499,7 @@ namespace Majorsilence.Reporting.RdlDesign
         /// <summary>
         /// Zoom 
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public float Zoom
         {
             get { return this.rdlDesigner.Zoom; }
@@ -491,6 +509,7 @@ namespace Majorsilence.Reporting.RdlDesign
         /// <summary>
         /// ZoomMode 
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ZoomEnum ZoomMode
         {
             get { return this.rdlDesigner.ZoomMode; }
@@ -505,12 +524,12 @@ namespace Majorsilence.Reporting.RdlDesign
             this.rdlDesigner.Print(pd);
         }
 
-        public void SaveAs(string filename, OutputPresentationType type)
+        public async Task SaveAs(string filename, OutputPresentationType type)
         {
-            rdlDesigner.SaveAs(filename, type);
+            await rdlDesigner.SaveAs(filename, type);
         }
 
-        private void MDIChild_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void MDIChild_Closing(object sender, System.Windows.Forms.FormClosingEventArgs e)
         {
             if (!OkToClose())
             {

@@ -1,25 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
 
-   This file is part of the fyiReporting RDL project.
-	
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-
-   For additional information, email info@fyireporting.com or visit
-   the website www.fyiReporting.com.
-*/
 
 using System;
 using System.Xml;
@@ -95,9 +74,9 @@ namespace Majorsilence.Reporting.Rdl
 			// Run thru the attributes
 			foreach(XmlAttribute xAttr in xNode.Attributes)
 			{
-				switch (xAttr.Name)
+				switch (xAttr.Name.ToLowerInvariant())
 				{
-					case "Name":
+					case "name":
 						_Name = new Name(xAttr.Value);
 						break;
 				}
@@ -108,39 +87,39 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (xNodeLoop.NodeType != XmlNodeType.Element)
 					continue;
-				switch (xNodeLoop.Name)
+				switch (xNodeLoop.Name.ToLowerInvariant())
 				{
-					case "Fields":
+					case "fields":
 						_Fields = new Fields(r, this, xNodeLoop);
 						break;
-					case "Query":
+					case "query":
 						_Query = new Query(r, this, xNodeLoop);
 						break;
-					case "Rows":	// Extension !!!!!!!!!!!!!!!!!!!!!!!
-					case "fyi:Rows":
+					case "rows":	// Extension !!!!!!!!!!!!!!!!!!!!!!!
+					case "fyi:rows":
 						_XmlRowData = "<?xml version='1.0' encoding='UTF-8'?><Rows>" + xNodeLoop.InnerXml + "</Rows>";
 						foreach(XmlAttribute xA in xNodeLoop.Attributes)
 						{
-							if (xA.Name == "File")
+							if (xA.Name.ToLowerInvariant() == "file")
 								_XmlRowFile = xA.Value;
 						}
 						break;
-					case "CaseSensitivity":
+					case "casesensitivity":
 						_CaseSensitivity = TrueFalseAuto.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "Collation":
+					case "collation":
 						_Collation = xNodeLoop.InnerText;
 						break;
-					case "AccentSensitivity":
+					case "accentsensitivity":
 						_AccentSensitivity = TrueFalseAuto.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "KanatypeSensitivity":
+					case "kanatypesensitivity":
 						_KanatypeSensitivity = TrueFalseAuto.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "WidthSensitivity":
+					case "widthsensitivity":
 						_WidthSensitivity = TrueFalseAuto.GetStyle(xNodeLoop.InnerText, OwnerReport.rl);
 						break;
-					case "Filters":
+					case "filters":
 						_Filters = new Filters(r, this, xNodeLoop);
 						break;
 					default:
@@ -183,7 +162,7 @@ namespace Majorsilence.Reporting.Rdl
             bool bRows = false;
 			if (_XmlRowData != null)
 			{		// Override the query and provide data from XML
-				string xdata = GetDataFile(rpt, _XmlRowFile);
+				string xdata = await GetDataFile(rpt, _XmlRowFile);
                 if (xdata == null)
                 {
                     xdata = _XmlRowData;					// didn't find any data
@@ -202,7 +181,7 @@ namespace Majorsilence.Reporting.Rdl
             return bRows;
 		}
 
-		private string GetDataFile(Report rpt, string file)
+		private async Task<string> GetDataFile(Report rpt, string file)
 		{
             if (file == null)		// no file no data
             {
@@ -225,7 +204,7 @@ namespace Majorsilence.Reporting.Rdl
 			try
 			{
 				fs = new StreamReader(fullpath);
-				d = fs.ReadToEnd();
+				d = await fs.ReadToEndAsync();
 			}
 			catch (FileNotFoundException fe)
 			{

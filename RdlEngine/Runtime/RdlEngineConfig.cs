@@ -1,26 +1,5 @@
-/* ==================================================================== 
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com> 
-
-   This file is part of the fyiReporting RDL project. 
-    
-   Licensed under the Apache License, Version 2.0 (the "License"); 
-   you may not use this file except in compliance with the License. 
-   You may obtain a copy of the License at 
-
-       http://www.apache.org/licenses/LICENSE-2.0 
-
-   Unless required by applicable law or agreed to in writing, software 
-   distributed under the License is distributed on an "AS IS" BASIS, 
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
-   See the License for the specific language governing permissions and 
-   limitations under the License. 
- 
-
-   For additional information, email info@fyireporting.com or visit 
-   the website www.fyiReporting.com. 
-*/
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Xml;
 using System.Collections;
 using System.Collections.Generic;
@@ -50,6 +29,11 @@ namespace Majorsilence.Reporting.Rdl
         static CompressionConfig _Compression = null;
         static string _DirectoryLoadedFrom = null;
 
+        // AOT registration state
+        static Func<Report, RdlCodeFunctions>? _codeProviderFactory = null;
+        static Dictionary<string, Type>? _registeredTypes = null;
+        static Dictionary<string, Func<object>>? _instanceFactories = null;
+
         static public string DirectoryLoadedFrom
         {
             get
@@ -60,6 +44,11 @@ namespace Majorsilence.Reporting.Rdl
         // initializes when no init available
         static public void RdlEngineConfigInit()
         {
+            // Register legacy code-page encodings (e.g. Windows-1252) so MHTML
+            // conversion works on non-Windows platforms.
+#if NET8_0_OR_GREATER
+            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+#endif
             string d1, d2;
             d1 = AppDomain.CurrentDomain.BaseDirectory;
             d2 = AppDomain.CurrentDomain.RelativeSearchPath;
@@ -94,9 +83,13 @@ namespace Majorsilence.Reporting.Rdl
                     bLoaded = true;
                     _DirectoryLoadedFrom = dir;
                 }
-                catch (Exception ex)
-                {   // can't do much about failures; no place to report them 
+                catch (Exception ex) when (ex is not FileNotFoundException && ex is not DirectoryNotFoundException)
+                {   // can't do much about failures; no place to report them
                     System.Console.WriteLine("Error opening RdlEngineConfig.xml: {0}", ex.Message);
+                }
+                catch
+                {
+                    // file not found is expected; built-in config will be used
                 }
                 if (bLoaded)
                     break;
@@ -105,8 +98,7 @@ namespace Majorsilence.Reporting.Rdl
             {
                 if (SqlEntries != null)         // we don't need to reinit with internal one 
                     return;
-                xDoc.InnerXml = @" 
-<?xml version=""1.0"" encoding=""utf-8""?>
+                xDoc.InnerXml = @"<?xml version=""1.0"" encoding=""utf-8""?>
 <config>
 	<DataSources>
 		<DataSource>
@@ -138,6 +130,7 @@ namespace Majorsilence.Reporting.Rdl
 			<DataProvider>OLEDB</DataProvider>
 			<TableSelect>SELECT TABLE_NAME, TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES ORDER BY 2, 1</TableSelect>
 			<Interface>SQL</Interface>
+			<ReplaceParameters>true</ReplaceParameters>
 		</DataSource>
 		<DataSource>
 			<DataProvider>Oracle</DataProvider>
@@ -148,7 +141,7 @@ namespace Majorsilence.Reporting.Rdl
 		</DataSource>
 		<DataSource>
 			<DataProvider>MySQL.NET</DataProvider>
-			<CodeModule>C:\Program Files (x86)\MySQL\MySQL Connector Net 6.3.7\Assemblies\v2.0\MySql.Data.dll</CodeModule>
+			<CodeModule>MySql.Data.dll</CodeModule>
 			<ClassName>MySql.Data.MySqlClient.MySqlConnection</ClassName>
 			<TableSelect>show tables</TableSelect>
 			<Interface>SQL</Interface>
@@ -229,6 +222,13 @@ namespace Majorsilence.Reporting.Rdl
 			<TableSelect />
 			<Interface>File</Interface>
 		</DataSource>
+        <DataSource>
+			<DataProvider>Json</DataProvider>
+			<CodeModule>Majorsilence.Reporting.DataProviders.dll</CodeModule>
+			<ClassName>Majorsilence.Reporting.Data.JsonConnection</ClassName>
+			<TableSelect />
+			<Interface>File</Interface>
+		</DataSource>
 		<DataSource>
 			<DataProvider>iTunes</DataProvider>
 			<CodeModule>Majorsilence.Reporting.DataProviders.dll</CodeModule>
@@ -288,6 +288,11 @@ namespace Majorsilence.Reporting.Rdl
 			<CodeModule>Majorsilence.Reporting.RdlCri.dll</CodeModule>
 			<ClassName>Majorsilence.Reporting.Cri.QrCode</ClassName>
 		</CustomReportItem>
+        <CustomReportItem>
+            <Type>QRCode</Type>
+            <CodeModule>Majorsilence.Reporting.RdlCri.dll</CodeModule>
+            <ClassName>Majorsilence.Reporting.Cri.QrCode</ClassName>
+        </CustomReportItem>
 		<CustomReportItem>
 			<Type>ITF-14</Type>
 			<CodeModule>Majorsilence.Reporting.RdlCri.dll</CodeModule>
@@ -313,6 +318,11 @@ namespace Majorsilence.Reporting.Rdl
 			<CodeModule>Majorsilence.Reporting.RdlCri.dll</CodeModule>
 			<ClassName>Majorsilence.Reporting.Cri.BarCodeEAN8</ClassName>
 		</CustomReportItem>
+        <CustomReportItem>
+            <Type>Pdf417</Type>
+            <CodeModule>Majorsilence.Reporting.RdlCri.dll</CodeModule>
+            <ClassName>Majorsilence.Reporting.Cri.Pdf417Barcode</ClassName>
+        </CustomReportItem>
 	</CustomReportItems>
 </config>";
             }
@@ -321,7 +331,7 @@ namespace Majorsilence.Reporting.Rdl
              
             IDictionary dsDir = new ListDictionary();
             Dictionary<string, CustomReportItemEntry> crieDir =
-                new Dictionary<string, CustomReportItemEntry>();   // list of entries 
+                new Dictionary<string, CustomReportItemEntry>(StringComparer.OrdinalIgnoreCase);   // list of entries 
 
             // Loop thru all the child nodes 
             foreach (XmlNode xNodeLoop in xNode.ChildNodes)
@@ -517,12 +527,6 @@ namespace Majorsilence.Reporting.Rdl
             IDbConnection cn = null;
             switch (provider.ToLower())
             {
-                case "sql":
-                    // can't connect unless information provided; 
-                    //   when user wants to set the connection programmatically this they should do this 
-                    if (cstring.Length > 0)
-                        cn = new SqlConnection(cstring);
-                    break;
                 case "odbc":
                     cn = new OdbcConnection(cstring);
                     break;
@@ -543,6 +547,9 @@ namespace Majorsilence.Reporting.Rdl
                     break;
                 case "text":
                     cn = new Majorsilence.Reporting.Data.TxtConnection(cstring);
+                    break;
+                case "json":
+                    cn = new Majorsilence.Reporting.Data.JsonConnection(cstring);
                     break;
                 case "itunes":
                     cn = new Majorsilence.Reporting.Data.iTunesConnection(cstring);
@@ -565,7 +572,7 @@ namespace Majorsilence.Reporting.Rdl
 
                     object[] args = new object[] { cstring };
                     Assembly asm = sce.CodeModule;
-                    object? o = asm.CreateInstance(sce.ClassName, false,
+                    object o = asm.CreateInstance(sce.ClassName, false,
                                    BindingFlags.CreateInstance, null, args, null, null);
                     if (o == null)
                         throw new Exception(string.Format(Strings.RdlEngineConfig_Error_UnableCreateInstance, sce.ClassName, provider));
@@ -695,8 +702,7 @@ namespace Majorsilence.Reporting.Rdl
                     Assembly[] allLoadedAss = AppDomain.CurrentDomain.GetAssemblies();
                     foreach (Assembly ass in allLoadedAss)
                     {
-                        var type = ass.GetType();
-                        if (type.GetMethod("Location") != null)
+                        try
                         {
                             if (ass.Location.Equals(codemodule, StringComparison.CurrentCultureIgnoreCase))
                             {
@@ -704,6 +710,7 @@ namespace Majorsilence.Reporting.Rdl
                                 break;
                             }
                         }
+                        catch { }
                     }
 
                     if (la == null)     // not previously loaded? 
@@ -724,17 +731,22 @@ namespace Majorsilence.Reporting.Rdl
             }
         }
 
+        [RequiresDynamicCode("Falls back to Activator.CreateInstance when no factory is registered; call RegisterCustomReportItem<T> for AOT")]
+        [RequiresUnreferencedCode("Custom report item types resolved from config may be trimmed; call RegisterCustomReportItem<T> for AOT")]
         public static ICustomReportItem CreateCustomReportItem(string friendlyTypeName)
         {
             CustomReportItemEntry crie = null;
             if (!CustomReportItemEntries.TryGetValue(friendlyTypeName, out crie))
                 throw new Exception(string.Format(Strings.RdlEngineConfig_Error_NotKnownCustomReportItemType, friendlyTypeName));
+
+            if (crie.Factory != null)
+                return crie.Factory();
+
             if (crie.Type == null)
                 throw new Exception(crie.ErrorMsg ??
                     string.Format(Strings.RdlEngineConfig_Error_NotKnownCustomReportItemType, friendlyTypeName));
 
-            var item = (ICustomReportItem)Activator.CreateInstance(crie.Type);
-            return item;
+            return (ICustomReportItem)Activator.CreateInstance(crie.Type)!;
         }
 
         public static void DeclareNewCustomReportItem(string itemName, Type type)
@@ -746,13 +758,88 @@ namespace Majorsilence.Reporting.Rdl
             if (CustomReportItemEntries == null)
                 RdlEngineConfigInit();
 
-            // Let's manage doublons, if any. 
+            // Let's manage doublons, if any.
             CustomReportItemEntry item;
             if (!CustomReportItemEntries.TryGetValue(itemName, out item))
                 CustomReportItemEntries[itemName] = new CustomReportItemEntry(itemName, type, null);
             else if (!item.Type.Equals(type))
                 throw new ArgumentException("A different type of CustomReportItem with the same has already been declared.");
         }
+
+        /// <summary>
+        /// AOT-safe: registers a custom report item using a generic constraint so the trimmer
+        /// can see the concrete type at compile time.
+        /// </summary>
+        public static void RegisterCustomReportItem<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(
+            string friendlyName)
+            where T : ICustomReportItem, new()
+            => RegisterCustomReportItem(friendlyName, () => new T());
+
+        /// <summary>
+        /// AOT-safe: registers a custom report item using a factory delegate.
+        /// </summary>
+        public static void RegisterCustomReportItem(string friendlyName, Func<ICustomReportItem> factory)
+        {
+            if (CustomReportItemEntries == null)
+                RdlEngineConfigInit();
+
+            if (!CustomReportItemEntries.TryGetValue(friendlyName, out var existing))
+                CustomReportItemEntries[friendlyName] = new CustomReportItemEntry(friendlyName, null, null) { Factory = factory };
+            else
+                existing.Factory = factory;
+        }
+
+        /// <summary>
+        /// AOT-safe: registers a delegate-based replacement for the RDL &lt;Code&gt; element,
+        /// used instead of runtime VB compilation via VBCodeProvider.
+        /// </summary>
+        public static void RegisterCodeProvider(Func<Report, RdlCodeFunctions> factory)
+            => _codeProviderFactory = factory;
+
+        /// <summary>
+        /// AOT-safe: pre-registers a type by its fully-qualified class name so the CodeModules
+        /// subsystem can resolve it without scanning loaded assemblies.
+        /// The <see cref="DynamicallyAccessedMembersAttribute"/> tells the trimmer to keep all
+        /// public methods and constructors on the type.
+        /// </summary>
+        public static void RegisterType(
+            string fullyQualifiedClassName,
+            [DynamicallyAccessedMembers(
+                DynamicallyAccessedMemberTypes.PublicMethods |
+                DynamicallyAccessedMemberTypes.PublicConstructors)] Type type)
+        {
+            _registeredTypes ??= new Dictionary<string, Type>(StringComparer.Ordinal);
+            _registeredTypes[fullyQualifiedClassName] = type;
+        }
+
+        /// <summary>
+        /// AOT-safe: pre-registers a factory for instance types used by ReportClass
+        /// and FunctionCustomInstance, keyed by fully-qualified class name.
+        /// </summary>
+        public static void RegisterInstanceFactory(string fullyQualifiedClassName, Func<object> factory)
+        {
+            _instanceFactories ??= new Dictionary<string, Func<object>>(StringComparer.Ordinal);
+            _instanceFactories[fullyQualifiedClassName] = factory;
+        }
+
+        internal static bool TryGetRegisteredType(string name, out Type? type)
+        {
+            if (_registeredTypes != null && _registeredTypes.TryGetValue(name, out type))
+                return true;
+            type = null;
+            return false;
+        }
+
+        internal static bool TryGetInstanceFactory(string name, out Func<object>? factory)
+        {
+            if (_instanceFactories != null && _instanceFactories.TryGetValue(name, out factory))
+                return true;
+            factory = null;
+            return false;
+        }
+
+        internal static Func<Report, RdlCodeFunctions>? CodeProviderFactory => _codeProviderFactory;
     }
 
     internal class CompressionConfig
@@ -908,6 +995,8 @@ namespace Majorsilence.Reporting.Rdl
             get { return _ErrorMsg; }
         }
 
+        [RequiresDynamicCode("Loads compression assemblies at runtime; not AOT-compatible")]
+        [RequiresUnreferencedCode("Compression types are resolved from config at runtime and may be trimmed")]
         void Init()
         {
             lock (this)
@@ -976,10 +1065,11 @@ namespace Majorsilence.Reporting.Rdl
     internal class CustomReportItemEntry
     {
         internal string ItemName;
-        internal Type Type;
-        internal string ErrorMsg;
+        internal Type? Type;
+        internal Func<ICustomReportItem>? Factory;
+        internal string? ErrorMsg;
 
-        internal CustomReportItemEntry(string itemName, Type type, string msg)
+        internal CustomReportItemEntry(string itemName, Type? type, string? msg)
         {
             Type = type;
             ItemName = itemName;

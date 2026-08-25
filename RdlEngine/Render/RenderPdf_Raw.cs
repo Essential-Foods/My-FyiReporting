@@ -402,6 +402,21 @@ namespace Majorsilence.Reporting.Rdl
             }
             else
             {
+                // Generic scan first: reads each font's real internal family
+                // name (TrueType 'name' table, nameID 1 / 16 — the same source
+                // GDI+ and the Windows font picker use) rather than guessing
+                // from the filename. This is what lets e.g. "Lato Light" match
+                // exactly what the report designer / WinForms viewer shows,
+                // instead of a filename-derived key like "Lato-Light".
+                // Must run BEFORE the hardcoded TryAddFamily calls below, since
+                // FontRegistry keys are case-insensitive and a same-named
+                // single-variant match here would otherwise clobber the
+                // correctly-mapped multi-variant entries for Arial/Times/etc.
+                if (Directory.Exists(sysFolder))
+                {
+                    try { AddDirectoryByRealFontName(reg, sysFolder); }
+                    catch { /* best-effort; fall through to explicit mappings below */ }
+                }
                 // Windows: abbreviated filenames (arial.ttf, arialbd.ttf, etc.)
                 TryAddFamily(reg, sysFolder, "Arial",
                     r: "arial.ttf", b: "arialbd.ttf",
@@ -456,6 +471,139 @@ namespace Majorsilence.Reporting.Rdl
                 reg.AddFamily(family, rPath, bPath, iPath, biPath);
         }
 
+        // ── directory scan by real font-internal name ───────────────────────────
+        // Reads the TrueType/OpenType 'name' table directly instead of guessing
+        // the family from the filename. Uses nameID 16 (Typographic Family) when
+        // present, falling back to nameID 1 (Font Family); style/weight comes
+        // from nameID 17 (Typographic Subfamily) falling back to nameID 2
+        // (Font Subfamily). This matches what GDI+ / InstalledFontCollection /
+        // the Windows font picker display, so RDL FontFamily values that were
+        // set by copy-pasting the name shown in Windows will resolve correctly.
+        // Does not support .ttc collections (each font is scanned individually).
+        private static void AddDirectoryByRealFontName(FontRegistry reg, string directory)
+        {
+            var found = new Dictionary<string, (string r, string b, string i, string bi)>(
+                StringComparer.OrdinalIgnoreCase);
+
+            var files = Directory.GetFiles(directory, "*.ttf")
+                .Concat(Directory.GetFiles(directory, "*.otf"));
+
+            foreach (string file in files)
+            {
+                if (!TryReadFontNames(file, out string family, out string subfamily))
+                    continue;
+
+                bool bold = subfamily.IndexOf("Bold", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool italic = subfamily.IndexOf("Italic", StringComparison.OrdinalIgnoreCase) >= 0
+                    || subfamily.IndexOf("Oblique", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                found.TryGetValue(family, out var entry);
+
+                if (bold && italic) entry.bi = file;
+                else if (bold) entry.b = file;
+                else if (italic) entry.i = file;
+                else entry.r = file;
+
+                found[family] = entry;
+            }
+
+            foreach (var kv in found)
+                reg.AddFamily(kv.Key, kv.Value.r, kv.Value.b, kv.Value.i, kv.Value.bi);
+        }
+
+        private static bool TryReadFontNames(string path, out string family, out string subfamily)
+        {
+            family = null;
+            subfamily = null;
+
+            try
+            {
+                using var fs = File.OpenRead(path);
+                using var br = new BinaryReader(fs);
+
+                uint sfntTag = ReadUInt32BE(br);
+                if (sfntTag == 0x74746366) // 'ttcf' font collection — skip, not supported here
+                    return false;
+
+                fs.Position = 4;
+                ushort numTables = ReadUInt16BE(br);
+                fs.Position = 12; // start of table directory
+
+                long nameTableOffset = -1;
+
+                for (int t = 0; t < numTables; t++)
+                {
+                    uint tableTag = ReadUInt32BE(br);
+                    br.ReadUInt32();               // checksum (unused)
+                    uint offset = ReadUInt32BE(br);
+                    br.ReadUInt32();                // length (unused)
+
+                    if (tableTag == 0x6e616d65)     // 'name'
+                    {
+                        nameTableOffset = offset;
+                        break;
+                    }
+                }
+
+                if (nameTableOffset < 0) return false;
+
+                fs.Position = nameTableOffset;
+                br.ReadUInt16();                    // format (unused)
+                ushort count = ReadUInt16BE(br);
+                ushort stringOffset = ReadUInt16BE(br);
+
+                long recordsStart = fs.Position;
+                string fontFamily = null, fontSub = null;
+                string typographicFamily = null, typographicSub = null;
+
+                for (int i = 0; i < count; i++)
+                {
+                    fs.Position = recordsStart + i * 12;
+                    ushort platformId = ReadUInt16BE(br);
+                    ushort encodingId = ReadUInt16BE(br);
+                    ushort languageId = ReadUInt16BE(br);
+                    ushort nameId = ReadUInt16BE(br);
+                    ushort length = ReadUInt16BE(br);
+                    ushort strOffset = ReadUInt16BE(br);
+
+                    bool isWindowsUnicode = platformId == 3 && (encodingId == 1 || encodingId == 10);
+                    bool isUsEnglish = languageId == 0x0409;
+                    if (!isWindowsUnicode || !isUsEnglish) continue;
+                    if (nameId != 1 && nameId != 2 && nameId != 16 && nameId != 17) continue;
+
+                    long savedPos = fs.Position;
+                    fs.Position = nameTableOffset + stringOffset + strOffset;
+                    byte[] bytes = br.ReadBytes(length);
+                    string value = System.Text.Encoding.BigEndianUnicode.GetString(bytes);
+                    fs.Position = savedPos;
+
+                    switch (nameId)
+                    {
+                        case 1: fontFamily = value; break;
+                        case 2: fontSub = value; break;
+                        case 16: typographicFamily = value; break;
+                        case 17: typographicSub = value; break;
+                    }
+                }
+
+                // Prefer the classic nameID 1/2 records over the OpenType-only
+                // typographic nameID 16/17 records. GDI+ (System.Drawing), and
+                // therefore the WinForms viewer, only ever reads 1/2 — so a
+                // font like Lato that ships separate weight files (each with
+                // its own nameID 1 like "Lato Light") is displayed by Windows
+                // as that many distinct top-level families, not as one "Lato"
+                // family with a weight axis. Matching that model here keeps
+                // FontFamily values consistent between the WinForms preview
+                // and this PDF renderer without needing to change the RDL.
+                family = fontFamily ?? typographicFamily;
+                subfamily = fontSub ?? typographicSub ?? "Regular";
+                return !string.IsNullOrEmpty(family);
+            }
+            catch
+            {
+                return false;
+            }
+        }
         // ── font resolution ───────────────────────────────────────────────────
 
         private static string NormalizeFace(string face)
@@ -660,6 +808,18 @@ namespace Majorsilence.Reporting.Rdl
             {
                 return null;
             }
+        }
+
+        private static uint ReadUInt32BE(BinaryReader br)
+        {
+            byte[] b = br.ReadBytes(4);
+            return (uint)((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]);
+        }
+
+        private static ushort ReadUInt16BE(BinaryReader br)
+        {
+            byte[] b = br.ReadBytes(2);
+            return (ushort)((b[0] << 8) | b[1]);
         }
     }
 }

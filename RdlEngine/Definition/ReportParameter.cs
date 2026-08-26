@@ -223,7 +223,13 @@ namespace Majorsilence.Reporting.Rdl
 			{
 				if (v is String && _NumericType)
 					v = ConvertStringToNumber((string) v);
-				rtv = Convert.ChangeType(v, _dt); 
+
+                // Edit Adam: this ensures that when setting the report for the first time, where parameter values have not been passed, a default value is created for value types.
+                if (v is null || v is DBNull)                
+                    if (_dt is not TypeCode.String and not TypeCode.Object and not TypeCode.DBNull and not TypeCode.Empty)
+                        v = Activator.CreateInstance(Type.GetType($"System.{_dt}"));                
+
+                rtv = Convert.ChangeType(v, _dt);
 			}
 			catch (Exception e)
 			{

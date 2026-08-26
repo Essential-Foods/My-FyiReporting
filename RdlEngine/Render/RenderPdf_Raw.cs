@@ -183,7 +183,7 @@ namespace Majorsilence.Reporting.Rdl
         // ── text ──────────────────────────────────────────────────────────────
 
         protected internal override void AddText(float x, float y, float height, float width,
-            string[] sa, StyleInfo si, float[] tw, bool bWrap, string url, bool bNoClip, string tooltip)
+           string[] sa, StyleInfo si, float[] tw, bool bWrap, string url, bool bNoClip, string tooltip)
         {
             if (sa == null || sa.Length == 0) return;
 
@@ -192,8 +192,12 @@ namespace Majorsilence.Reporting.Rdl
             // RenderBase.MeasureString wraps text using System.Drawing/SkiaSharp metrics, which
             // can differ from Majorsilence.Pdf's embedded TrueType metrics.  Re-wrap here using
             // the actual PDF font metrics so that text fits within cell boundaries.
+            // Vertical (tb-rl) text is always kept as RenderBase.MeasureString's single unwrapped
+            // line (see its own WritingMode check) -- the box's width is the rotated run's
+            // thickness, not its available length, so wrapping against it here would split one
+            // rotated line into several that then get drawn on top of each other.
             float availableW = width - si.PaddingLeft - si.PaddingRight;
-            if (!bNoClip && availableW > 0)
+            if (!bNoClip && availableW > 0 && si.WritingMode != WritingModeEnum.tb_rl)
                 sa = RewrapLines(sa, baseStyle, availableW);
 
             if (!si.BackgroundColor.IsEmpty && height > 0 && width > 0)
@@ -254,30 +258,34 @@ namespace Majorsilence.Reporting.Rdl
                     {
                         case TextDecorationEnum.Underline:
                             AddLine(startX, startY + si.FontSize + 1,
-                                    maxX,   startY + si.FontSize + 1,
+                                    maxX, startY + si.FontSize + 1,
                                     1, si.Color, BorderStyleEnum.Solid);
                             break;
                         case TextDecorationEnum.LineThrough:
                             AddLine(startX, startY + si.FontSize / 2f + 1,
-                                    maxX,   startY + si.FontSize / 2f + 1,
+                                    maxX, startY + si.FontSize / 2f + 1,
                                     1, si.Color, BorderStyleEnum.Solid);
                             break;
                         case TextDecorationEnum.Overline:
                             AddLine(startX, startY + 1,
-                                    maxX,   startY + 1,
+                                    maxX, startY + 1,
                                     1, si.Color, BorderStyleEnum.Solid);
                             break;
                     }
                 }
                 else
                 {
-                    startX += si.FontSize / 4f;
+                    // Perpendicular-to-baseline centering offset. Sign depends on the
+                    // rotation direction of the vertical CTM in PdfCanvas.DrawText --
+                    // flipped alongside that fix so the run centers within its column
+                    // instead of drifting to one side of it.
+                    startX -= si.FontSize / 1.5f;
                     switch (si.TextAlign)
                     {
                         case TextAlignEnum.Center:
                             if (height > 0)
-                                startY = y + si.PaddingLeft
-                                       + (height - si.PaddingLeft - si.PaddingRight) / 2f
+                                startY = y + si.PaddingTop
+                                       + (height - si.PaddingTop - si.PaddingBottom) / 2f
                                        - textwidth / 2f;
                             break;
                         case TextAlignEnum.Right:
@@ -285,14 +293,19 @@ namespace Majorsilence.Reporting.Rdl
                                 startY = y + height - textwidth - si.PaddingRight;
                             break;
                     }
-                    _currentPage.DrawText(text, startX, startY + si.FontSize,
-                        baseStyle.WithVertical());
+                    // Unlike the horizontal branch, startY here is already the desired
+                    // start point along the reading direction (top of the padded box) --
+                    // it is not a baseline that needs pushing down by one line height, so
+                    // (unlike the horizontal branch) we do NOT add si.FontSize here.
+                    _currentPage.DrawText(text, startX, startY,
+                                             baseStyle.WithVertical());
                 }
             }
 
             AddAnnotations(x, y, height, width, url, tooltip);
             iAddBorder(si, x, y, height, width);
         }
+
 
         // ── PDF-accurate text re-wrapping ─────────────────────────────────────
 

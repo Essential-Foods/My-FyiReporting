@@ -86,7 +86,7 @@ namespace Majorsilence.Pdf
             sb.Append("q\n");
 
             if (style.IsVertical)
-                sb.Append($"{F(0)} {F(1)} {F(-1)} {F(0)} {F(x)} {F(pdfY)} cm\n");
+                sb.Append($"{F(0)} {F(-1)} {F(1)} {F(0)} {F(x)} {F(pdfY)} cm\n");
             else
                 sb.Append("1 0 0 1 0 0 cm\n");
 

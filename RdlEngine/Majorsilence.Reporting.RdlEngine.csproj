@@ -109,7 +109,6 @@
 		<!-- CodeDom/VBCodeProvider usage is guarded with RuntimeFeature.IsDynamicCodeSupported -->
 		<PackageReference Include="System.CodeDom" />
 		<PackageReference Condition="'$(DefineConstants.Contains(DRAWINGCOMPAT))' == False" Include="System.Drawing.Common" />
-		<PackageReference Include="System.Security.Cryptography.Xml" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="PageDrawing.cs" />

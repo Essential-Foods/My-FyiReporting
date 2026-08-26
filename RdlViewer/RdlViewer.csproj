@@ -16,7 +16,6 @@
 		<TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
 		<WarningsAsErrors>4014</WarningsAsErrors>
 		<Platforms>AnyCPU;x86</Platforms>
-	</PropertyGroup>
         <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
         <IsPackable>true</IsPackable>
     </PropertyGroup>

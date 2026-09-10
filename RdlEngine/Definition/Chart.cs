@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 
 
 #if DRAWINGCOMPAT
-using Draw2 = Majorsilence.Drawing;
-using Imaging = Majorsilence.Drawing.Imaging;
+using Draw2 = Majorsilence.Forms.Drawing;
+using Imaging = Majorsilence.Forms.Drawing.Imaging;
 #else
 using Draw2 = System.Drawing;
 using Imaging = System.Drawing.Imaging;
@@ -258,6 +258,9 @@ namespace Majorsilence.Reporting.Rdl
 			Report rpt = pgs.Report;
 
 			if (await IsHidden(pgs.Report, row))
+				return;
+
+			if (_ChartMatrix == null)	// FinalPass skips building this when the report already has other errors
 				return;
 
 			_ChartMatrix.RunReset(rpt);

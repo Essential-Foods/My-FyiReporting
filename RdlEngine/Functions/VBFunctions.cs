@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections;
 using System.IO;
@@ -16,6 +16,32 @@ namespace Majorsilence.Reporting.Rdl
 	/// </summary>
 	sealed public class VBFunctions
 	{
+		/// <summary>
+		/// Converts an expression to Decimal (VB.NET's CDec).
+		/// </summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		static public decimal CDec(object value)
+		{
+			return Convert.ToDecimal(value);
+		}
+
+		/// <summary>
+		/// Builds a "#RRGGBB" color string from RGB components (Crystal's Color(r,g,b)
+		/// conditional-formatting function). Returned as a string, the same convention
+		/// this codebase's own Crystal-color-constant mapping already uses (crRed ->
+		/// "Red", etc.), rather than a System.Drawing/Majorsilence.Forms.Drawing Color value —
+		/// BackColor/ForeColor style expressions are evaluated as strings.
+		/// </summary>
+		/// <param name="r"></param>
+		/// <param name="g"></param>
+		/// <param name="b"></param>
+		/// <returns></returns>
+		static public string Color(object r, object g, object b)
+		{
+			return $"#{Convert.ToInt32(r):X2}{Convert.ToInt32(g):X2}{Convert.ToInt32(b):X2}";
+		}
+
 		/// <summary>
 		/// Obtains the year
 		/// </summary>
@@ -107,6 +133,18 @@ namespace Majorsilence.Reporting.Rdl
 			string wdn = bAbbreviation? string.Format("{0:ddd}", dt):string.Format("{0:dddd}", dt);
 			return wdn;
 		}
+		/// <summary>
+		/// Returns a Date value for a specified year, month, and day (VB.NET's DateSerial).
+		/// </summary>
+		/// <param name="year"></param>
+		/// <param name="month"></param>
+		/// <param name="day"></param>
+		/// <returns></returns>
+		static public DateTime DateSerial(object year, object month, object day)
+		{
+			return new DateTime(Convert.ToInt32(year), Convert.ToInt32(month), Convert.ToInt32(day));
+		}
+
 		/// <summary>
 		/// Get the day of the month.
 		/// </summary>
@@ -284,6 +322,64 @@ namespace Majorsilence.Reporting.Rdl
 			return Convert.ToString(o);
 		}
 		/// <summary>
+		/// Crystal's own 2-argument CStr — formats a value either to a fixed number of
+		/// decimal places (numeric second argument, e.g. CStr(123.456, 2) -> "123.46") or
+		/// with a .NET format string (string second argument, e.g. CStr(x, "#")). VB.NET's
+		/// CStr only ever takes one argument; this overload exists purely for that Crystal
+		/// usage.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="format"></param>
+		/// <returns></returns>
+		static public string CStr(object value, object format)
+		{
+			if (format is string fmt)
+				return value is IFormattable formattable ? formattable.ToString(fmt, null) : Convert.ToString(value);
+			return Convert.ToDouble(value).ToString("F" + Convert.ToInt32(format));
+		}
+		/// <summary>
+		/// Crystal's 3- and 4-argument CStr/ToText: value, decimal places, thousands
+		/// separator, and optionally the decimal separator — CStr(x, 5, ",", ".") or
+		/// CStr(x, 0, "") for a plain ungrouped integer. An empty thousands separator
+		/// means "no grouping". Crystal also allows a format string in the second
+		/// position with the separators along for the ride; that wins when present.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="places"></param>
+		/// <param name="thousandsSeparator"></param>
+		/// <returns></returns>
+		static public string CStr(object value, object places, object thousandsSeparator)
+		{
+			return CStr(value, places, thousandsSeparator, ".");
+		}
+		/// <summary>
+		/// See the 3-argument overload.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="places"></param>
+		/// <param name="thousandsSeparator"></param>
+		/// <param name="decimalSeparator"></param>
+		/// <returns></returns>
+		static public string CStr(object value, object places, object thousandsSeparator, object decimalSeparator)
+		{
+			if (places is string fmt)
+				return value is IFormattable formattable ? formattable.ToString(fmt, null) : Convert.ToString(value);
+
+			string thousands = Convert.ToString(thousandsSeparator) ?? "";
+			string point = Convert.ToString(decimalSeparator);
+			if (string.IsNullOrEmpty(point))
+				point = ".";
+
+			string s = Convert.ToDouble(value).ToString(
+				(thousands.Length == 0 ? "F" : "N") + (int)Convert.ToDouble(places),
+				System.Globalization.CultureInfo.InvariantCulture);
+			// Invariant formatting groups with "," and points with "."; rebuild around
+			// the decimal point so a "," decimal separator cannot collide with grouping.
+			int dot = s.LastIndexOf('.');
+			string whole = (dot < 0 ? s : s.Substring(0, dot)).Replace(",", thousands);
+			return dot < 0 ? whole : whole + point + s.Substring(dot + 1);
+		}
+		/// <summary>
 		/// Returns the hexadecimal value of a specified number
 		/// </summary>
 		/// <param name="o"></param>
@@ -356,13 +452,131 @@ namespace Majorsilence.Reporting.Rdl
                 case "w":           // weekday 
                     date = date.AddDays(number);
                     break;
-                case "ww":          // week of year 
+                case "ww":          // week of year
                     date = date.AddDays((int)Math.Round(number, 0) * 7);
                     break;
                 default:
                     throw new ArgumentException(string.Format("Interval '{0}' is invalid or unsupported.", interval));
             }
             return date;
+        }
+
+        /// <summary>
+        /// Absolute value. Object-typed so the expression parser's exact-type reflection
+        /// lookup binds any numeric runtime value (same reasoning as IsNothing(object)).
+        /// </summary>
+        static public double Abs(object value)
+        {
+            return Math.Abs(Convert.ToDouble(value));
+        }
+
+        /// <summary>
+        /// Repeats a string. Accepts either argument order — VB.NET's StrDup takes
+        /// (count, character) while Crystal's ReplicateString, which converters map to
+        /// this name, takes (text, count).
+        /// </summary>
+        static public string StrDup(object a, object b)
+        {
+            bool aIsCount = a is not string s1 || double.TryParse(s1, out _);
+            object count = aIsCount ? a : b;
+            object text = aIsCount ? b : a;
+            int n = (int)Convert.ToDouble(count);
+            if (n <= 0) return string.Empty;
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < n; i++) sb.Append(Convert.ToString(text));
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Crystal's ToWords: spells a number in English words, cheque-style, with the
+        /// fractional part as "and NN / 100". Optional second argument sets the number
+        /// of fractional digits (default 2).
+        /// </summary>
+        static public string ToWords(object value)
+        {
+            return ToWords(value, 2);
+        }
+
+        static public string ToWords(object value, object decimals)
+        {
+            double v = Convert.ToDouble(value);
+            int dec = (int)Convert.ToDouble(decimals);
+            string sign = v < 0 ? "negative " : "";
+            v = Math.Abs(v);
+            long whole = (long)Math.Floor(v);
+            string words = SpellNumber(whole);
+            if (dec <= 0)
+                return sign + words;
+            long frac = (long)Math.Round((v - whole) * Math.Pow(10, dec));
+            return string.Format("{0}{1} and {2} / {3}", sign, words,
+                frac.ToString(new string('0', dec)), Math.Pow(10, dec));
+        }
+
+        static private readonly string[] WordsOnes =
+        {
+            "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+            "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+            "sixteen", "seventeen", "eighteen", "nineteen"
+        };
+        static private readonly string[] WordsTens =
+        {
+            "", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy",
+            "eighty", "ninety"
+        };
+
+        static private string SpellNumber(long n)
+        {
+            if (n < 20) return WordsOnes[n];
+            if (n < 100) return WordsTens[n / 10] + (n % 10 != 0 ? "-" + WordsOnes[n % 10] : "");
+            if (n < 1000) return WordsOnes[n / 100] + " hundred" + (n % 100 != 0 ? " " + SpellNumber(n % 100) : "");
+            if (n < 1000000) return SpellNumber(n / 1000) + " thousand" + (n % 1000 != 0 ? " " + SpellNumber(n % 1000) : "");
+            if (n < 1000000000) return SpellNumber(n / 1000000) + " million" + (n % 1000000 != 0 ? " " + SpellNumber(n % 1000000) : "");
+            return SpellNumber(n / 1000000000) + " billion" + (n % 1000000000 != 0 ? " " + SpellNumber(n % 1000000000) : "");
+        }
+
+        /// <summary>
+        /// Date-part accessors, object-typed for reflection binding when the argument's
+        /// inferred TypeCode isn't DateTime (String-typed DataSet fields most commonly).
+        /// </summary>
+        static public int Year(object dt) { return ToDate(dt).Year; }
+        static public int Month(object dt) { return ToDate(dt).Month; }
+        static public int Day(object dt) { return ToDate(dt).Day; }
+
+        static private DateTime ToDate(object o)
+        {
+            return o is DateTime d ? d : DateTime.Parse(Convert.ToString(o));
+        }
+
+        /// <summary>
+        /// Returns the number of intervals between two dates (VB.NET DateDiff).
+        /// Same interval codes as DateAdd above. Arguments are object-typed so the
+        /// expression parser's exact-type reflection lookup (XmlUtil.GetMethod) binds
+        /// regardless of whether the runtime values arrive as DateTime, string, or a
+        /// boxed field value of unknown TypeCode — the same reasoning as IsNothing(object).
+        /// </summary>
+        /// <param name="interval">Interval code: yyyy, q, m, y, d, w, ww, h, n, s.</param>
+        /// <param name="date1">Start date.</param>
+        /// <param name="date2">End date; result is positive when date2 is later.</param>
+        static public double DateDiff(object interval, object date1, object date2)
+        {
+            DateTime d1 = date1 is DateTime dt1 ? dt1 : DateTime.Parse(Convert.ToString(date1));
+            DateTime d2 = date2 is DateTime dt2 ? dt2 : DateTime.Parse(Convert.ToString(date2));
+            switch (Convert.ToString(interval))
+            {
+                case "yyyy": return d2.Year - d1.Year;
+                case "q":    return (d2.Year - d1.Year) * 4 + (d2.Month - 1) / 3 - (d1.Month - 1) / 3;
+                case "m":    return (d2.Year - d1.Year) * 12 + d2.Month - d1.Month;
+                case "y":                    // day of year — same day count as "d" for a diff
+                case "d":
+                case "w":                    // weekday-interval count = whole days
+                    return Math.Floor((d2.Date - d1.Date).TotalDays);
+                case "ww":   return Math.Floor((d2.Date - d1.Date).TotalDays / 7);
+                case "h":    return Math.Floor((d2 - d1).TotalHours);
+                case "n":    return Math.Floor((d2 - d1).TotalMinutes);
+                case "s":    return Math.Floor((d2 - d1).TotalSeconds);
+                default:
+                    throw new ArgumentException(string.Format("Interval '{0}' is invalid or unsupported.", interval));
+            }
         }
 
 		/// <summary>
@@ -500,6 +714,17 @@ namespace Majorsilence.Reporting.Rdl
         /// </summary>
         /// <param name="v"></param>
         /// <returns></returns>
+        /// <summary>
+        /// Returns whether an expression contains no valid data (VB.NET's IsNothing).
+        /// Field values from a null database column surface here as .NET null or DBNull.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        static public bool IsNothing(object value)
+        {
+            return value == null || value is DBNull;
+        }
+
         static public bool IsNumeric(object expression)
         {
             if (expression == null)
@@ -898,5 +1123,384 @@ namespace Majorsilence.Reporting.Rdl
 		{
 			return Environment.NewLine;
 		}
+
+        // ── Object-typed overloads of existing string functions ──────────────────
+        // The expression parser resolves functions by *exact* runtime argument type
+        // (XmlUtil.GetMethod). A field or parameter whose type the parser could not
+        // infer arrives as Object, so the String-typed overloads above never bind and
+        // the call surfaces as "Function X is not known". These mirror them for that
+        // case — same reasoning as Abs(object)/IsNothing(object).
+
+        static public string Trim(object str)
+        {
+            return str == null || str is DBNull ? "" : Convert.ToString(str).Trim(' ');
+        }
+
+        static public string LTrim(object str)
+        {
+            return str == null || str is DBNull ? "" : Convert.ToString(str).TrimStart(' ');
+        }
+
+        static public string RTrim(object str)
+        {
+            return str == null || str is DBNull ? "" : Convert.ToString(str).TrimEnd(' ');
+        }
+
+        static public string Mid(object str, object start)
+        {
+            return Mid(Convert.ToString(str), (int)Convert.ToDouble(start));
+        }
+
+        static public string Mid(object str, object start, object length)
+        {
+            return Mid(Convert.ToString(str), (int)Convert.ToDouble(start), (int)Convert.ToDouble(length));
+        }
+
+        static public int InStr(object string1, object string2)
+        {
+            return InStr(1, Convert.ToString(string1), Convert.ToString(string2), 0);
+        }
+
+        static public int Len(object str)
+        {
+            return str == null ? 0 : Convert.ToString(str).Length;
+        }
+
+        /// <summary>
+        /// The VB "Like" operator, used by the expression parser. The pattern language is
+        /// VB's, not SQL's: "*" matches any run of characters, "?" a single one, "#" a
+        /// single digit, and "[abc]" / "[!abc]" a character in or not in a set. It is
+        /// translated to a regular expression rather than matched by hand so the set and
+        /// range forms come out right, and the whole pattern is anchored because Like
+        /// matches the entire string.
+        /// </summary>
+        static public bool Like(object text, object pattern)
+        {
+            string s = text == null ? "" : Convert.ToString(text);
+            string p = pattern == null ? "" : Convert.ToString(pattern);
+
+            var re = new StringBuilder("^");
+            for (int i = 0; i < p.Length; i++)
+            {
+                char c = p[i];
+                if (c == '*')
+                    re.Append(".*");
+                else if (c == '?')
+                    re.Append('.');
+                else if (c == '#')
+                    re.Append("[0-9]");
+                else if (c == '[')
+                {
+                    int close = p.IndexOf(']', i + 1);
+                    if (close < 0)                      // an unclosed set is a literal '['
+                        re.Append("\\[");
+                    else
+                    {
+                        string set = p.Substring(i + 1, close - i - 1);
+                        re.Append('[');
+                        if (set.StartsWith("!"))
+                        {
+                            re.Append('^');
+                            set = set.Substring(1);
+                        }
+                        // Only ']' and '\' need escaping inside a character class; '-'
+                        // stays as written so ranges like [a-z] keep working.
+                        re.Append(set.Replace("\\", "\\\\").Replace("]", "\\]"));
+                        re.Append(']');
+                        i = close;
+                    }
+                }
+                else
+                    re.Append(System.Text.RegularExpressions.Regex.Escape(c.ToString()));
+            }
+            re.Append('$');
+
+            return System.Text.RegularExpressions.Regex.IsMatch(s, re.ToString(),
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+        }
+
+        static public string Replace(object str, object find, object replacewith)
+        {
+            return Replace(Convert.ToString(str), Convert.ToString(find), Convert.ToString(replacewith));
+        }
+
+        static public DateTime CDate(object value)
+        {
+            return value is DateTime d ? d : Convert.ToDateTime(value);
+        }
+
+        /// <summary>
+        /// Crystal also spells the year/month/day constructor CDate, alongside DateSerial.
+        /// </summary>
+        static public DateTime CDate(object year, object month, object day)
+        {
+            return new DateTime(Convert.ToInt32(year), Convert.ToInt32(month), Convert.ToInt32(day));
+        }
+
+        /// <summary>
+        /// Crystal's CDateTime conversion — the full value, unlike DateValue, which keeps
+        /// only the date part. Crystal's synonym DateTime() is mapped to this name by the
+        /// converter rather than declared here: a method called DateTime would shadow the
+        /// type of the same name for every member access in this class.
+        /// </summary>
+        static public DateTime CDateTime(object value)
+        {
+            return value is DateTime d ? d : Convert.ToDateTime(value);
+        }
+
+        /// <summary>
+        /// Crystal/VB's Int: rounds toward negative infinity, unlike Fix, which truncates
+        /// toward zero — they differ only for negative values (Int(-2.5) = -3, Fix = -2).
+        /// </summary>
+        static public double Int(object value)
+        {
+            return Math.Floor(Convert.ToDouble(value));
+        }
+
+        /// <summary>
+        /// VB's StrConv, which Crystal's ProperCase maps onto. The conversion is VB's
+        /// numeric constant — 1 upper, 2 lower, 3 proper — rather than the VbStrConv enum,
+        /// because the expression parser resolves a bare dotted name as an identifier and
+        /// has no way to reach an enum member. Unknown codes pass the value through.
+        /// </summary>
+        static public string StrConv(object value, object conversion)
+        {
+            string s = Convert.ToString(value) ?? "";
+            switch ((int)Convert.ToDouble(conversion))
+            {
+                case 1: return s.ToUpperInvariant();
+                case 2: return s.ToLowerInvariant();
+                case 3: return System.Globalization.CultureInfo.InvariantCulture
+                                 .TextInfo.ToTitleCase(s.ToLowerInvariant());
+                default: return s;
+            }
+        }
+
+        // ── Functions Crystal has that VB.NET does not ───────────────────────────
+
+        /// <summary>
+        /// Current local date and time. VB.NET spells this as a property rather than a
+        /// function, so it is absent from the reflection-visible surface until declared.
+        /// </summary>
+        static public DateTime Now()
+        {
+            return DateTime.Now;
+        }
+
+        /// <summary>
+        /// Crystal/VB's Val: the value of the longest leading numeric prefix of a string,
+        /// ignoring embedded spaces, or 0 when there isn't one. Never throws — Val's whole
+        /// purpose in these reports is coercing free-text columns to numbers safely.
+        /// </summary>
+        static public double Val(object value)
+        {
+            if (value == null || value is DBNull)
+                return 0;
+
+            if (value is string s)
+            {
+                var sb = new StringBuilder();
+                bool seenPoint = false;
+                foreach (char c in s)
+                {
+                    if (c == ' ')
+                        continue;
+                    if (char.IsDigit(c))
+                        sb.Append(c);
+                    else if ((c == '-' || c == '+') && sb.Length == 0)
+                        sb.Append(c);
+                    else if (c == '.' && !seenPoint)
+                    {
+                        seenPoint = true;
+                        sb.Append(c);
+                    }
+                    else
+                        break;
+                }
+                return double.TryParse(sb.ToString(), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double d) ? d : 0;
+            }
+
+            try { return Convert.ToDouble(value); }
+            catch { return 0; }
+        }
+
+        /// <summary>
+        /// Crystal's NumericText: whether a string holds a number (and so can be converted
+        /// without error). Typically guards a CDbl in the same expression.
+        /// </summary>
+        static public bool NumericText(object value)
+        {
+            if (value == null || value is DBNull)
+                return false;
+            if (value is string s)
+                return s.Trim().Length > 0
+                    && double.TryParse(s.Trim(), System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out _);
+            return IsNumeric(value);
+        }
+
+        /// <summary>
+        /// Whether a value is, or parses as, a date/time (Crystal's IsDateTime).
+        /// </summary>
+        static public bool IsDateTime(object value)
+        {
+            if (value == null || value is DBNull)
+                return false;
+            if (value is DateTime)
+                return true;
+            return DateTime.TryParse(Convert.ToString(value), out _);
+        }
+
+        /// <summary>
+        /// Truncates toward zero (VB's Fix). Crystal's second argument keeps that many
+        /// decimal places rather than truncating to a whole number.
+        /// </summary>
+        static public double Fix(object value)
+        {
+            return Math.Truncate(Convert.ToDouble(value));
+        }
+
+        static public double Fix(object value, object places)
+        {
+            double factor = Math.Pow(10, (int)Convert.ToDouble(places));
+            return Math.Truncate(Convert.ToDouble(value) * factor) / factor;
+        }
+
+        /// <summary>
+        /// Rounds down; Crystal's second argument rounds down to the nearest multiple of
+        /// it instead of to a whole number (Floor(1250, 100) -> 1200).
+        /// </summary>
+        static public double Floor(object value)
+        {
+            return Math.Floor(Convert.ToDouble(value));
+        }
+
+        static public double Floor(object value, object multiple)
+        {
+            double m = Convert.ToDouble(multiple);
+            double v = Convert.ToDouble(value);
+            return m == 0 ? v : Math.Floor(v / m) * m;
+        }
+
+        /// <summary>
+        /// Rounds up; Crystal's second argument rounds up to the nearest multiple of it
+        /// instead of to a whole number (Ceiling(102.8, 100) -> 200).
+        /// </summary>
+        static public double Ceiling(object value)
+        {
+            return Math.Ceiling(Convert.ToDouble(value));
+        }
+
+        static public double Ceiling(object value, object multiple)
+        {
+            double m = Convert.ToDouble(multiple);
+            double v = Convert.ToDouble(value);
+            return m == 0 ? v : Math.Ceiling(v / m) * m;
+        }
+
+        /// <summary>
+        /// Crystal's Roundup. The one-argument form is Ceiling; the two-argument form
+        /// rounds up at a number of decimal places, which is not what Ceiling's second
+        /// argument means (a multiple), so it gets its own function rather than a
+        /// caller-side conversion that would be easy to get subtly wrong. A negative
+        /// count rounds up to tens, hundreds and so on, as Crystal does.
+        /// </summary>
+        static public double RoundUp(object value)
+        {
+            return Math.Ceiling(Convert.ToDouble(value));
+        }
+
+        static public double RoundUp(object value, object decimals)
+        {
+            double v = Convert.ToDouble(value);
+            double scale = Math.Pow(10, Convert.ToInt32(decimals));
+            return scale == 0 ? v : Math.Ceiling(v * scale) / scale;
+        }
+
+        /// <summary>
+        /// Crystal's Picture(text, template): walks the template, replacing each 'x'
+        /// with the next character of the text and copying every other character
+        /// through unchanged. Once the text runs out the remaining placeholders are
+        /// dropped while the literal characters still emit, matching Crystal.
+        /// </summary>
+        static public string Picture(object text, object template)
+        {
+            string s = text == null ? "" : Convert.ToString(text);
+            string t = template == null ? "" : Convert.ToString(template);
+            var sb = new StringBuilder(t.Length);
+            int next = 0;
+            foreach (char c in t)
+            {
+                if (c == 'x' || c == 'X')
+                {
+                    if (next < s.Length)
+                        sb.Append(s[next++]);
+                }
+                else
+                    sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Crystal's Remainder — the modulus. Yields 0 rather than throwing on a zero
+        /// divisor, matching how Crystal degrades rather than failing the whole report.
+        /// </summary>
+        static public double Remainder(object numerator, object denominator)
+        {
+            double d = Convert.ToDouble(denominator);
+            return d == 0 ? 0 : Convert.ToDouble(numerator) % d;
+        }
+
+        /// <summary>
+        /// Crystal's DateValue: the date part of a value, or a date built from
+        /// year/month/day components.
+        /// </summary>
+        static public DateTime DateValue(object value)
+        {
+            return (value is DateTime d ? d : Convert.ToDateTime(value)).Date;
+        }
+
+        static public DateTime DateValue(object year, object month, object day)
+        {
+            return new DateTime(Convert.ToInt32(year), Convert.ToInt32(month), Convert.ToInt32(day));
+        }
+
+        /// <summary>
+        /// Unicode character for a code point. Returned as a string (not a char) because
+        /// every observed use concatenates it — ChrW(13) building multi-line text.
+        /// </summary>
+        static public string ChrW(object code)
+        {
+            return ((char)Convert.ToInt32(code)).ToString();
+        }
+
+        /// <summary>
+        /// One field of a delimited string, 1-based — Crystal's Split(text, delimiter)[n].
+        /// Split itself returns an array, which this expression language has no way to
+        /// index, so converters collapse the pair into this single call. Out-of-range
+        /// indexes yield an empty string rather than throwing, matching how Crystal treats
+        /// a short row.
+        /// </summary>
+        static public string SplitPart(object text, object delimiter, object index)
+        {
+            string s = Convert.ToString(text) ?? "";
+            string d = Convert.ToString(delimiter) ?? "";
+            int n = (int)Convert.ToDouble(index);
+            if (d.Length == 0 || n < 1)
+                return n == 1 ? s : "";
+            string[] parts = s.Split(new string[] { d }, StringSplitOptions.None);
+            return n <= parts.Length ? parts[n - 1] : "";
+        }
+
+        /// <summary>
+        /// Unicode code point of a value's first character; 0 when empty.
+        /// </summary>
+        static public int AscW(object value)
+        {
+            string s = Convert.ToString(value);
+            return string.IsNullOrEmpty(s) ? 0 : s[0];
+        }
     }
 }

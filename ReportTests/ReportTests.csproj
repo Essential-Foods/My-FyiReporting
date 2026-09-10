@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
 		<Configurations>Debug;Release;Debug-DrawingCompat;Release-DrawingCompat</Configurations>
@@ -11,14 +11,35 @@
     <ItemGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">
         <ProjectReference Include="..\EncryptionProvider\EncryptionProvider.csproj" />
     </ItemGroup>
+    <ItemGroup Condition="'$(Configuration)' != 'Debug' And '$(Configuration)' != 'Release'">
+        <!-- Needs EncryptionProvider, which the configurations above are the only ones to reference. -->
+        <Compile Remove="StringEncryptionTests.cs" />
+    </ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\DataProviders\Majorsilence.Reporting.DataProviders.csproj" />
-		<ProjectReference Include="..\Majorsilence.Drawing.Common\Majorsilence.Drawing.Common.csproj" />
 		<ProjectReference Include="..\RdlCmd\RdlCmd.csproj" />
 		<ProjectReference Include="..\RdlCri\Majorsilence.Reporting.RdlCri.csproj" />
 		<ProjectReference Include="..\RdlEngine\Majorsilence.Reporting.RdlEngine.csproj" />
 	</ItemGroup>
+	<!-- The compat packages ship net8.0/net10.0 only, so the net48 inner build (where
+	     DRAWINGCOMPAT is never defined) must not reference them. Matches RdlEngine. -->
+	<ItemGroup Condition="'$(DrawingCompat)' == 'true'">
+		<PackageReference Include="Majorsilence.Forms" />
+		<PackageReference Include="Majorsilence.Forms.Drawing.Common" />
+	</ItemGroup>
 	<ItemGroup>
+		<None Update="Reports\ImageSizing.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\ExpressionGapsTest.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\NullableParameterTest.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\NullableParameterSub.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="Reports\BaseTestReport.rdl">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
@@ -38,6 +59,9 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="Reports\SetDataRebuildTest.rdl">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Reports\PushedDataCalculatedFieldTest.rdl">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="Reports\CanGrowPageTest.rdl">

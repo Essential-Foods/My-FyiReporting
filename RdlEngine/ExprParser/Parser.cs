@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -187,7 +187,8 @@ namespace Majorsilence.Reporting.Rdl
 				t == TokenTypes.GREATERTHAN ||
 				t == TokenTypes.GREATERTHANOREQUAL ||
 				t == TokenTypes.LESSTHAN ||
-				t == TokenTypes.LESSTHANOREQUAL)
+				t == TokenTypes.LESSTHANOREQUAL ||
+				t == TokenTypes.LIKE)
 			{
 				curToken = tokens.Extract();
 				IExpr rhs;
@@ -212,6 +213,9 @@ namespace Majorsilence.Reporting.Rdl
 						break;
 					case TokenTypes.LESSTHANOREQUAL:
 						result = new FunctionRelopLTE(lhs, rhs);
+						break;
+					case TokenTypes.LIKE:
+						result = new FunctionRelopLike(lhs, rhs);
 						break;
 				}
 				lhs = result;		// in case we continue the loop
@@ -588,7 +592,17 @@ namespace Majorsilence.Reporting.Rdl
 						continue;
 					}
 					if (tok.Type == TokenTypes.RPAREN)
+					{
 						level--;
+						// The aggregate's own closing paren. A scope argument can only appear
+						// inside the call, so the scan has to stop here: left unbounded it ran
+						// on into the enclosing expression and took whatever followed *its*
+						// next comma as this aggregate's scope. An aggregate with no arguments
+						// inside a conditional -- IIf(RowNumber() = CountRows(), a, b) -- then
+						// reported "a function's scope must be a constant".
+						if (level < 0)
+							break;
+					}
 					if (tok.Type == TokenTypes.LPAREN)
 						level++;
 				}

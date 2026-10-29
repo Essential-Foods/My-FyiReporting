@@ -49,4 +49,15 @@
       <UndefineProperties>%(UndefineProperties);PublishAot</UndefineProperties>
     </ProjectReference>
   </ItemDefinitionGroup>
+
+  <!-- Essential Foods: these projects are only built inside EssentialUtils for quick bugfixes,
+       so their warnings are silenced there. Building MajorsilenceReporting.sln still shows them. -->
+  <PropertyGroup Condition="'$(SolutionName)' != 'MajorsilenceReporting'">
+    <!-- all C# compiler warnings, including nullable -->
+    <WarningLevel>0</WarningLevel>
+    <!-- analyzers (IL trim/AOT, CA, IDE) in builds and VS live analysis -->
+    <RunAnalyzers>false</RunAnalyzers>
+    <!-- NU190x vulnerability warnings for the fork's packages -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>  
 </Project>
